@@ -1,0 +1,5 @@
+extern _print_zero_terminated_string
+extern _print_character_array
+extern _print_unsigned_int
+extern _flush_print_buffer
+
