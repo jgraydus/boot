@@ -18,4 +18,11 @@ STDIN_FILENO    equ   0
 STDOUT_FILENO   equ   1
 STDERR_FILENO   equ   2
 
+; object types
+TYPE_LIST_OBJ       equ 1
+TYPE_STRING_OBJ     equ 2
+TYPE_INTEGER_OBJ    equ 3
+TYPE_SYMBOL_OBJ     equ 4
+TYPE_FUNCTION_OBJ   equ 5
+
 
