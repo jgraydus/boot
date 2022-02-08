@@ -1,4 +1,5 @@
 %include "constants.inc"
+%include "print.inc"
 
 ; heap data structure
 ;
@@ -12,6 +13,10 @@ section .bss
     heap:      resq 1
     next:      resq 1
     remaining: resq 1
+
+section .data
+    oom:       db "ERROR: Out of memory", 10
+    omm_len:   dq 21
 
 section .text
 
@@ -36,4 +41,36 @@ _init_heap:
 ;   rax - pointer to allocated memory
 global _malloc
 _malloc:
-    
+    cmp rax, [remaining]
+    jg .handle_oom
+    push rbx
+    mov rbx, [remaining]
+    sub rbx, rax
+    mov [remaining], rbx
+    mov rbx, [next]
+    add rbx, rax
+    mov rax, [next]
+    mov [next], rbx
+    pop rbx
+    ret
+
+.handle_oom:
+    mov rsi, oom
+    mov rdx, [omm_len]
+    call _flush_print_buffer
+    ; exit
+    mov rax, SYS_EXIT
+    mov rdi, 1
+    syscall
+
+
+
+global _free
+_free:
+    ; TODO
+    ret
+
+
+
+
+
