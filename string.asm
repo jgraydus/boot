@@ -77,6 +77,42 @@ _print_string:
     syscall
     ret 
 
+READ_SIZE         equ 1024
+
+; output:
+;   rax - address of string read from stdin
+global _read_string
+_read_string:
+    ; create a string
+    call _new_string
+    push rbx
+    mov rbx, rax
+.prep_and_read:
+    ; make sure there's enough remaining room in the string's buffer
+    mov r8, [rbx]
+    sub r8, [rbx+8]  ; (buffer size) - (content size)
+    cmp r8, READ_SIZE 
+    jge .read
+    mov rax, rbx
+    call _double_buffer_size
+    jmp .prep_and_read 
+.read:
+    mov rax, SYS_READ
+    mov rdi, STDIN_FILENO
+    mov rsi, [rbx+16]
+    add rsi, [rbx+8]
+    mov rdx, READ_SIZE
+    syscall
+    cmp rax, 0            ; done when 0 bytes are read
+    je .done
+    add [rbx+8], rax      ; increase size of content by bytes read
+    jmp .prep_and_read
+.done:
+    mov rax, rbx
+    pop rbx
+    ret
+
+
 
 ; input:
 ;   rax - address of string
