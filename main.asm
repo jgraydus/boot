@@ -1,14 +1,12 @@
 %include "constants.inc"
+%include "lexer.inc"
 %include "memory.inc"
 %include "print.inc"
 %include "string.inc"
 
-section .data
-    message: db "hello there", 10
-    message_len: dq 12
-
 section .bss
     input: resq 1
+
 
 section .text
 
@@ -27,11 +25,10 @@ _start:
     call _read_string
     mov [input], rax
 
-    mov rsi, message
-    mov rcx, [message_len]
-    call _append_from_buffer
+    mov rsi, rax
+    call _new_lexer 
 
-    call _print_string
+
 
 
     ; exit

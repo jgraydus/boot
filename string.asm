@@ -153,5 +153,27 @@ _append_from_buffer:
     pop rbx
     ret 
 
+; input:
+;   rsi - address of string
+; output:
+;   rax - length of the string content
+global _string_length
+_string_length:
+    mov rax, [rsi+16] 
+    ret
+
+
+; input:
+;   rsi - address of string
+;   rdi - index into the string
+; output:
+;   al - the character in the string at the given index
+global _string_char_at
+_string_char_at:
+    mov r8, [rsi+24]    ; buffer address
+    add r8, rdi
+    mov al, [r8]
+    ret
+
 
 

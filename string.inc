@@ -2,4 +2,6 @@ extern _new_string
 extern _print_string
 extern _read_string
 extern _append_from_buffer
+extern _string_length
+extern _string_char_at
 

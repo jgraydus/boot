@@ -18,6 +18,14 @@ STDIN_FILENO    equ   0
 STDOUT_FILENO   equ   1
 STDERR_FILENO   equ   2
 
+; token types
+TOKEN_LEFT_PAREN    equ 1
+TOKEN_RIGHT_PAREN   equ 2
+TOKEN_SYMBOL        equ 3
+TOKEN_STRING        equ 4
+TOKEN_INTEGER       equ 5
+TOKEN_EOF           equ 6
+
 ; object types
 TYPE_LIST_OBJ       equ 1
 TYPE_STRING_OBJ     equ 2
