@@ -26,10 +26,25 @@ _start:
     mov [input], rax
 
     mov rsi, rax
-    call _new_lexer 
+    call _new_lexer
+    mov r12, rax
+
+.next_tok:
+    mov rsi, r12
+    call _next_token
+    ;cmp rax, 0
+    ;je .next_tok
+    mov r13, rax
+    call _print_token
+    mov rax, [r13+0]
+    cmp rax, TOKEN_EOF
+    jne .next_tok
+.done:
 
 
 
+    ;mov rax, [input]
+    ;call _print_string
 
     ; exit
     pop r15

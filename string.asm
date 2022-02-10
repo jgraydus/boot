@@ -172,6 +172,7 @@ global _string_char_at
 _string_char_at:
     mov r8, [rsi+24]    ; buffer address
     add r8, rdi
+    mov rax, 0
     mov al, [r8]
     ret
 
