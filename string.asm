@@ -154,6 +154,19 @@ _append_from_buffer:
     ret 
 
 ; input:
+;   rax - address of string to modify
+;   rsi - address of string to append
+; output:
+;   rax - address of string (unchanged)
+global _string_append
+_string_append:
+   mov rcx, [rsi+16]  ; # of bytes to append
+   mov rdx, rsi
+   mov rsi, [rdx+24]  ; source string's buffer
+   call _append_from_buffer
+   ret 
+
+; input:
 ;   rsi - address of string
 ; output:
 ;   rax - length of the string content
@@ -175,6 +188,31 @@ _string_char_at:
     mov rax, 0
     mov al, [r8]
     ret
+
+; input;
+;   rax - address of string
+;   r8 - index of first character
+;   r9 - index 1 greater than last character
+global _substring
+_substring:
+    mov rsi, [rax+24]
+    call _new_string
+    add rsi, r8   ; start
+    mov rcx, r9
+    sub rcx, r8   ; length
+    call _append_from_buffer
+    ret
+
+
+
+
+
+
+
+
+
+
+
 
 
 

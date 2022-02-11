@@ -28,10 +28,11 @@ _new_lexer:
 ; struct {
 ;     qword,          ; type
 ;     qword,          ; start index
-;     qword,          ; end index  
+;     qword,          ; end index
+;     ptr,            ; other stuff (depends on token) 
 ; }
 
-SIZEOF_TOKEN              equ 24
+SIZEOF_TOKEN              equ 32
 
 ; input:
 ;   rsi - address of lexer object
@@ -94,7 +95,7 @@ _next_token:
     ; right paren
     mov cl, 41
     cmp al, cl
-    jne .next3
+    jne .string
     mov rax, SIZEOF_TOKEN
     call _malloc
     mov qword [rax+0], TOKEN_RIGHT_PAREN
@@ -103,8 +104,53 @@ _next_token:
     inc rcx
     mov [rax+16], rcx
     jmp .done
-.next3:
+.string:
+    mov cl, 34      ; " character
+    cmp al, cl
+    jne .next
+    mov rax, SIZEOF_TOKEN
+    call _malloc
+    mov qword [rax+0], TOKEN_STRING
+    mov r8, r15
+    inc r8
+    mov [rax+8], r8    ; position of first character
+    push rax
+.string_loop:
+    mov r15, [r12+8]
+    cmp r15, r13
+    je .string_done
+    mov rsi, [r12+0]
+    mov rdi, r15
+    call _string_char_at
+    ; increment position
+    inc rdi
+    mov [r12+8], rdi
+    ; stop at next "
+    mov cl, 34
+    cmp al, cl
+    jne .string_loop 
+.string_done:
+    pop rax
+    push rbx
+    mov rbx, rax   ; token 
+    mov [rbx+16], r15
+    ; copy string into token 
+    mov rax, [r12+0]  ; input string
+    mov r8, [rbx+8]   ; from index
+    mov r9, [rbx+16]  ; to index
+    call _substring
+    mov [rbx+24], rax
+    mov rax, rbx
+    pop rbx
+    jmp .done
 
+.integer:
+    ; TODO
+
+.symbol:
+    ; TODO
+
+.next:
     ; TODO other tokens
 
    
@@ -123,6 +169,8 @@ section .rodata
     eof_token: db "[EOF]"
     left_paren_token: db "[LEFT_PAREN]"
     right_paren_token: db "[RIGHT_PAREN]"
+    string_token_start: db "[STRING ", 34
+    string_token_end: db 34, "]"
 
 section .text
 
@@ -155,13 +203,30 @@ _print_token:
 .right_paren:
     mov rcx, [r12+0]
     cmp rcx, TOKEN_RIGHT_PAREN
-    jne .next
+    jne .string
     call _new_string
     mov rsi, right_paren_token
     mov rcx, 13
     call _append_from_buffer
     call _print_string
     jmp .done
+.string:
+    mov rcx, [r12+0]
+    cmp rcx, TOKEN_STRING
+    jne .next
+    call _new_string
+    ; prefix
+    mov rsi, string_token_start
+    mov rcx, 9
+    call _append_from_buffer
+    ; string
+    mov rsi, [r12+24]
+    call _string_append
+    ; suffix
+    mov rsi, string_token_end
+    mov rcx, 2
+    call _append_from_buffer
+    call _print_string
 
 .next:
     
