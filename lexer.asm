@@ -29,7 +29,7 @@ _new_lexer:
 ;     qword,          ; type
 ;     qword,          ; start index
 ;     qword,          ; end index
-;     ptr,            ; other stuff (depends on token) 
+;     ptr or qword,   ; other stuff (depends on token) 
 ; }
 
 SIZEOF_TOKEN              equ 32
@@ -107,7 +107,7 @@ _next_token:
 .string:
     mov cl, 34      ; " character
     cmp al, cl
-    jne .next
+    jne .integer
     mov rax, SIZEOF_TOKEN
     call _malloc
     mov qword [rax+0], TOKEN_STRING
@@ -143,9 +143,46 @@ _next_token:
     mov rax, rbx
     pop rbx
     jmp .done
-
 .integer:
-    ; TODO
+    ; first digit
+    cmp al, 49     ; '1'
+    jl .symbol
+    cmp al, 57     ; '9'
+    jg .symbol
+    ; accumulate integer value into r8
+    sub rax, 48     ; shift ascii value to numeric value of digit
+    mov r8, rax
+    ; create token
+    mov rax, SIZEOF_TOKEN
+    call _malloc
+    mov qword [rax+0], TOKEN_INTEGER
+    mov [rax+8], r15
+    push rax
+.integer_next_digit:
+    mov r15, [r12+8]
+    mov rsi, [r12+0]
+    mov rdi, r15
+    call _string_char_at
+    cmp al, 48       ; '0'
+    jl .integer_done
+    cmp al, 57       ; '9'
+    jg .integer_done
+    inc rdi
+    mov [r12+8], rdi
+    ; multiply previous value by 10 and add value of new digit
+    push rax
+    mov rax, 10
+    mul r8
+    mov r8, rax
+    pop rax
+    sub rax, 48
+    add r8, rax
+    jmp .integer_next_digit 
+.integer_done:
+    pop rax
+    mov [rax+16], r15
+    mov [rax+24], r8      ; integer value   
+    jmp .done
 
 .symbol:
     ; TODO
@@ -171,6 +208,8 @@ section .rodata
     right_paren_token: db "[RIGHT_PAREN]"
     string_token_start: db "[STRING ", 34
     string_token_end: db 34, "]"
+    integer_token_start: db "[INTEGER "
+    integer_token_end: db "]"
 
 section .text
 
@@ -213,7 +252,7 @@ _print_token:
 .string:
     mov rcx, [r12+0]
     cmp rcx, TOKEN_STRING
-    jne .next
+    jne .integer
     call _new_string
     ; prefix
     mov rsi, string_token_start
@@ -227,6 +266,29 @@ _print_token:
     mov rcx, 2
     call _append_from_buffer
     call _print_string
+    jmp .done
+.integer:
+    mov rcx, [r12+0]
+    cmp rcx, TOKEN_INTEGER
+    jne .next
+    call _new_string
+    ; prefix
+    mov rsi, integer_token_start
+    mov rcx, 9
+    call _append_from_buffer
+    ; integer value
+    push rax
+    mov rax, [r12+24]
+    call _string_from_integer
+    mov rsi, rax
+    pop rax
+    call _string_append
+    ; suffix
+    mov rsi, integer_token_end
+    mov rcx, 1
+    call _append_from_buffer
+    call _print_string
+    jmp .done
 
 .next:
     

@@ -6,4 +6,5 @@ extern _string_append
 extern _string_length
 extern _string_char_at
 extern _substring
+extern _string_from_integer
 

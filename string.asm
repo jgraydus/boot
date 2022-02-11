@@ -181,6 +181,7 @@ _string_length:
 ;   rdi - index into the string
 ; output:
 ;   al - the character in the string at the given index
+;        (zeros out the rest of rax)
 global _string_char_at
 _string_char_at:
     mov r8, [rsi+24]    ; buffer address
@@ -203,7 +204,15 @@ _substring:
     call _append_from_buffer
     ret
 
-
+; input:
+;   rax - (signed) integer value
+; output:
+;   rax - address of string
+global _string_from_integer
+_string_from_integer:
+   call _new_string
+   ; TODO
+   ret 
 
 
 
