@@ -145,7 +145,7 @@ _next_token:
     jmp .done
 .integer:
     ; first digit
-    cmp al, 49     ; '1'
+    cmp al, 48     ; '0'
     jl .symbol
     cmp al, 57     ; '9'
     jg .symbol
@@ -162,7 +162,9 @@ _next_token:
     mov r15, [r12+8]
     mov rsi, [r12+0]
     mov rdi, r15
+    push r8
     call _string_char_at
+    pop r8
     cmp al, 48       ; '0'
     jl .integer_done
     cmp al, 57       ; '9'
@@ -270,7 +272,7 @@ _print_token:
 .integer:
     mov rcx, [r12+0]
     cmp rcx, TOKEN_INTEGER
-    jne .next
+    jne .symbol
     call _new_string
     ; prefix
     mov rsi, integer_token_start
@@ -290,7 +292,15 @@ _print_token:
     call _print_string
     jmp .done
 
-.next:
+.symbol:
+    mov rcx, [r12+0]
+    cmp rcx, TOKEN_SYMBOL
+    jne .error
+    ; TODO
+
+
+.error:
+    ; TODO
     
 .done:
     pop r12

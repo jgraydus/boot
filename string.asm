@@ -1,5 +1,6 @@
 %include "constants.inc"
 %include "memory.inc"
+%include "print.inc"
 
 ; struct {
 ;     qword,      ; string object type tag
@@ -204,15 +205,60 @@ _substring:
     call _append_from_buffer
     ret
 
+section .rodata
+    least_signed_integer: db "-9223372036854775808"  ; 20 characters
+    minus_sign: db "-"
+
+STRING_FROM_INTEGER_BUFFER_SIZE          equ 32
+section .bss
+    string_from_integer_buffer: resb STRING_FROM_INTEGER_BUFFER_SIZE
+
+section .text
+
 ; input:
 ;   rax - (signed) integer value
 ; output:
 ;   rax - address of string
 global _string_from_integer
 _string_from_integer:
-   call _new_string
-   ; TODO
-   ret 
+    push rbx
+    mov rbx, rax
+    call _new_string
+    ; first check for least integer values as a special case
+    mov r8, -9223372036854775808
+    cmp rbx, r8
+    jne .next1
+    mov rsi, least_signed_integer
+    mov rcx, 20
+    call _append_from_buffer
+    jmp .done
+.next1:
+    ; check for negative value
+    cmp rbx, 0
+    jns .next2
+    ; insert a negative sign and negate the value to make it positive
+    mov rsi, minus_sign
+    mov rcx, 1
+    call _append_from_buffer
+    push rax
+    mov rax, -1
+    imul rbx
+    mov rbx, rax
+    pop rax 
+.next2:
+    ; handle positive value
+    push rax
+    mov rax, rbx
+    mov rdi, string_from_integer_buffer
+    mov rdx, 32
+    call _print_unsigned_int
+    mov rcx, rax
+    pop rax
+    mov rsi, string_from_integer_buffer
+    call _append_from_buffer
+.done:
+    pop rbx
+    ret 
 
 
 
