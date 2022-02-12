@@ -185,10 +185,46 @@ _next_token:
     mov [rax+16], r15
     mov [rax+24], r8      ; integer value   
     jmp .done
-
 .symbol:
-    ; TODO
-
+    cmp al, 33
+    jl .next
+    cmp al, 126
+    jg .next
+    mov rax, SIZEOF_TOKEN
+    call _malloc
+    mov qword [rax+0], TOKEN_SYMBOL
+    mov [rax+8], r15
+    push rax 
+.symbol_next_character:
+    mov r15, [r12+8]
+    mov rsi, [r12+0]
+    mov rdi, r15
+    call _string_char_at
+    cmp al, 33
+    jl .symbol_done
+    cmp al, 126
+    jg .symbol_done
+    cmp al, 40          ; (
+    je .symbol_done
+    cmp al, 41          ; )
+    je .symbol_done
+    inc rdi
+    mov [r12+8], rdi
+    jmp .symbol_next_character
+.symbol_done:
+    pop rax
+    push rbx
+    mov rbx, rax   ; token 
+    mov [rbx+16], r15
+    ; copy string into token 
+    mov rax, [r12+0]  ; input string
+    mov r8, [rbx+8]   ; from index
+    mov r9, [rbx+16]  ; to index
+    call _substring
+    mov [rbx+24], rax
+    mov rax, rbx
+    pop rbx
+    jmp .done
 .next:
     ; TODO other tokens
 
@@ -208,10 +244,12 @@ section .rodata
     eof_token: db "[EOF]"
     left_paren_token: db "[LEFT_PAREN]"
     right_paren_token: db "[RIGHT_PAREN]"
-    string_token_start: db "[STRING ", 34
+    string_token_start: db "[STRING ", 34    ; 34 is " character
     string_token_end: db 34, "]"
     integer_token_start: db "[INTEGER "
     integer_token_end: db "]"
+    symbol_token_start: db "[SYMBOL "
+    symbol_token_end: db "]"
 
 section .text
 
@@ -291,13 +329,24 @@ _print_token:
     call _append_from_buffer
     call _print_string
     jmp .done
-
 .symbol:
     mov rcx, [r12+0]
     cmp rcx, TOKEN_SYMBOL
     jne .error
-    ; TODO
-
+    call _new_string
+    ; prefix
+    mov rsi, symbol_token_start
+    mov rcx, 8
+    call _append_from_buffer
+    ; string
+    mov rsi, [r12+24]
+    call _string_append
+    ; suffix
+    mov rsi, symbol_token_end
+    mov rcx, 1
+    call _append_from_buffer
+    call _print_string
+    jmp .done
 
 .error:
     ; TODO
