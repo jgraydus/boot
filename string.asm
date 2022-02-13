@@ -16,6 +16,7 @@ SIZEOF_STRING_OBJ     equ 32
 ;   rax - address of an empty string with a 16 byte buffer
 global _new_string
 _new_string:
+    push rcx
     ; allocate memory for data
     mov rax, 16
     call _malloc
@@ -28,6 +29,7 @@ _new_string:
     mov qword [rax+8], 16       ; buffer length
     mov qword [rax+16], 0       ; content length
     mov qword [rax+24], rcx     ; pointer to buffer
+    pop rcx
     ret
 
 ; double the buffer size of the given string and copy the existing
@@ -36,6 +38,9 @@ _new_string:
 ; input:
 ;   rax - pointer to string structure
 _double_buffer_size:
+    push rsi
+    push rcx
+    push rdx
     push rbx
     mov rbx, rax    ; need rax to call _malloc
     push rax
@@ -66,6 +71,9 @@ _double_buffer_size:
     call _free
     pop rax
     pop rbx
+    pop rdx
+    pop rcx
+    pop rsi
     ret
 
 
@@ -73,11 +81,17 @@ _double_buffer_size:
 ;   rax - address of string
 global _print_string
 _print_string:
+    push rsi
+    push rdx
+    push rdi
     mov rsi, [rax+24]
     mov rdx, [rax+16]
     mov rax, SYS_WRITE
     mov rdi, STDOUT_FILENO
     syscall
+    pop rdi
+    pop rdx
+    pop rsi
     ret 
 
 READ_SIZE         equ 1024
@@ -86,6 +100,10 @@ READ_SIZE         equ 1024
 ;   rax - address of string read from stdin
 global _read_string
 _read_string:
+    push r8
+    push rsi
+    push rdi
+    push rdx
     ; create a string
     call _new_string
     push rbx
@@ -113,6 +131,10 @@ _read_string:
 .done:
     mov rax, rbx
     pop rbx
+    pop rdx
+    pop rdi
+    pop rsi
+    pop r8
     ret
 
 
@@ -126,21 +148,19 @@ _read_string:
 global _append_from_buffer
 _append_from_buffer:
 .ensure_buffer_length:
+    push r8
+    push rdi
+    push rbx
     mov r8, [rax+8]      ; buffer size
     sub r8, [rax+16]    ; subtract content size
     cmp r8, rcx
     jg .copy
-    push rsi
-    push rcx
     call _double_buffer_size
-    pop rcx
-    pop rsi
     jmp .ensure_buffer_length
 .copy:
     mov rdi, [rax+24]    ; set destination address
     add rdi, [rax+16]     ; skip past existing content
     add [rax+16], rcx     ; increase content length
-    push rbx             ; must preserve
 .loop:
     cmp rcx, 0
     je .done
@@ -152,6 +172,8 @@ _append_from_buffer:
     jmp .loop
 .done:
     pop rbx
+    pop rdi
+    pop r8
     ret 
 
 ; input:
@@ -161,10 +183,14 @@ _append_from_buffer:
 ;   rax - address of string (unchanged)
 global _string_append
 _string_append:
+   push rcx
+   push rdx
    mov rcx, [rsi+16]  ; # of bytes to append
    mov rdx, rsi
    mov rsi, [rdx+24]  ; source string's buffer
    call _append_from_buffer
+   pop rdx
+   pop rcx
    ret 
 
 ; input:
@@ -185,10 +211,12 @@ _string_length:
 ;        (zeros out the rest of rax)
 global _string_char_at
 _string_char_at:
+    push r8
     mov r8, [rsi+24]    ; buffer address
     add r8, rdi
     mov rax, 0
     mov al, [r8]
+    pop r8
     ret
 
 ; input;
@@ -197,12 +225,16 @@ _string_char_at:
 ;   r9 - index 1 greater than last character
 global _substring
 _substring:
+    push rsi
+    push rcx
     mov rsi, [rax+24]
     call _new_string
     add rsi, r8   ; start
     mov rcx, r9
     sub rcx, r8   ; length
     call _append_from_buffer
+    pop rcx
+    pop rsi
     ret
 
 section .rodata
@@ -221,6 +253,11 @@ section .text
 ;   rax - address of string
 global _string_from_integer
 _string_from_integer:
+    push r8
+    push rcx
+    push rsi
+    push rdi
+    push rdx
     push rbx
     mov rbx, rax
     call _new_string
@@ -258,6 +295,11 @@ _string_from_integer:
     call _append_from_buffer
 .done:
     pop rbx
+    pop rdx
+    pop rdi
+    pop rsi
+    pop rcx
+    pop r8
     ret 
 
 

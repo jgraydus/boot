@@ -40,10 +40,14 @@ SIZEOF_TOKEN              equ 32
 ;   rax - address of token object
 global _next_token
 _next_token:
+    push r8
+    push r9
     push r12
     push r13
     push r14
     push r15
+    push rdi
+    push rcx
 
     ; remember the lexer object
     mov r12, rsi
@@ -231,10 +235,14 @@ _next_token:
    
     mov rax, 0
 .done:
+    pop rcx
+    pop rdi
     pop r15
     pop r14
     pop r13
     pop r12
+    pop r9
+    pop r8
     ret
 
 

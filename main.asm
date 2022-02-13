@@ -3,6 +3,7 @@
 %include "memory.inc"
 %include "print.inc"
 %include "string.inc"
+%include "vec.inc"
 
 section .bss
     input: resq 1
@@ -29,22 +30,48 @@ _start:
     call _new_lexer
     mov r12, rax
 
+    mov rax, 4
+    call _new_vec
+    mov r15, rax
+
+; tokenize input
 .next_tok:
     mov rsi, r12
     call _next_token
-    ;cmp rax, 0
-    ;je .next_tok
+
     mov r13, rax
-    call _print_token
+    ; call _print_token
+
+    mov rsi, rax
+    mov rax, r15
+    call _vec_append
+
     mov rax, [r13+0]
     cmp rax, TOKEN_EOF
     jne .next_tok
-.done:
 
 
+; print the tokens
+    push r8
+    push r9
+    mov r8, 0
+    mov rax, r15
+    call _vec_length
+    mov r9, rax
+_loop:
+    cmp r8, r9
+    je _done
+    mov rax, r15
+    mov rsi, r8
+    call _vec_value_at
+    call _print_token
+    inc r8
+    jmp _loop
+_done:
+    pop r9
+    pop r8
 
-    ;mov rax, [input]
-    ;call _print_string
+
 
     ; exit
     pop r15
