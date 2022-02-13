@@ -12,6 +12,7 @@ section .bss
 
 section .rodata
     space_character: db " "
+    newline: db 10
 
 section .text
 
@@ -88,6 +89,12 @@ jmp .parse
     pop r9
     pop r8
 
+    call _new_string
+    mov rsi, newline
+    mov rcx, 1
+    call _append_from_buffer
+    call _print_string
+
 .parse:
     mov rax, r15
     call _new_parser
@@ -95,7 +102,7 @@ jmp .parse
 .parse_next:
     mov rax, r12
     call _parse_next
-    cmp rax, 0
+    cmp rax, -1
     je .parse_done
     call _object_to_string
     ; add a space
@@ -105,13 +112,6 @@ jmp .parse
     call _print_string
     jmp .parse_next
 .parse_done:
-
-    mov rax, r15
-    mov rsi, 0
-    call _vec_value_at
-
-
-
 
 
 

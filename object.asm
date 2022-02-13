@@ -32,7 +32,6 @@ _make_list_obj:
     mov [rax+16], rcx 
     ret
 
-
 ; integer object 
 ;
 ; struct {
@@ -121,6 +120,10 @@ section .rodata
     double_quote: db 34
     function_string: db "<FUNCTION>"
     list_string_tmp: db "<LIST>"
+    nil_object: db "()"
+    left_paren: db "("
+    right_paren: db ")"
+    space: db " "
 
 section .text
 
@@ -130,11 +133,24 @@ section .text
 ;   rax - address of string
 global _object_to_string
 _object_to_string:
+    push r8
+    push r9
     push rcx
     push rsi
     push rbx
+
+    ; check for nil
+    cmp rax, 0
+    jne .go
+    call _new_string
+    mov rsi, nil_object
+    mov rcx, 2
+    call _append_from_buffer
+    jmp .done
+
+.go:
     mov rbx, rax
-    mov rax, [rbx+0]
+    mov rax, [rbx+0]   
 
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
@@ -175,10 +191,32 @@ _object_to_string:
 .list:
     cmp rax, TYPE_LIST_OBJ
     jne .error
-    ; TODO   print <LIST> for now
     call _new_string
-    mov rsi, list_string_tmp
-    mov rcx, 6
+    mov rsi, left_paren
+    mov rcx, 1
+    call _append_from_buffer
+    mov r8, rax   ; hold the string
+    mov r9, rbx   ; hold next list node
+.list_next:
+    mov rax, [r9+8]  ; object in list
+    call _object_to_string
+    mov rsi, rax
+    mov rax, r8 
+    call _string_append
+    mov r9, [r9+16]  ; tail of the list
+    ; if the tail is nil, then done
+    cmp r9, 0
+    je .list_done
+    ; append a space character
+    mov rax, r8
+    mov rsi, space
+    mov rcx, 1
+    call _append_from_buffer
+    jmp .list_next
+.list_done:
+    mov rax, r8
+    mov rsi, right_paren
+    mov rcx, 1
     call _append_from_buffer
     jmp .done
 
@@ -189,6 +227,8 @@ _object_to_string:
     pop rbx
     pop rsi
     pop rcx
+    pop r9
+    pop r8
     ret
 
 
