@@ -1,6 +1,8 @@
 %include "constants.inc"
 %include "lexer.inc"
 %include "memory.inc"
+%include "object.inc"
+%include "parser.inc"
 %include "print.inc"
 %include "string.inc"
 %include "vec.inc"
@@ -26,6 +28,18 @@ _start:
     call _read_string
     mov [input], rax
 
+
+    ;mov rax, [input]
+    ;mov r8, 2
+    ;mov r9, 6
+    ;call _substring
+    ;call _print_string
+
+
+;jmp .exit
+
+
+
     mov rsi, rax
     call _new_lexer
     mov r12, rax
@@ -50,6 +64,7 @@ _start:
     cmp rax, TOKEN_EOF
     jne .next_tok
 
+jmp .parse
 
 ; print the tokens
     push r8
@@ -58,22 +73,40 @@ _start:
     mov rax, r15
     call _vec_length
     mov r9, rax
-_loop:
+.loop:
     cmp r8, r9
-    je _done
+    je .done
     mov rax, r15
     mov rsi, r8
     call _vec_value_at
     call _print_token
     inc r8
-    jmp _loop
-_done:
+    jmp .loop
+.done:
     pop r9
     pop r8
 
+.parse:
+    mov rax, r15
+    call _new_parser
+    mov r12, rax
+
+    mov rax, r12
+    call _parse_next
+    call _object_to_string
+    call _print_string 
+
+    mov rax, r15
+    mov rsi, 0
+    call _vec_value_at
 
 
-    ; exit
+
+
+
+
+
+.exit:
     pop r15
     pop r14
     pop r13

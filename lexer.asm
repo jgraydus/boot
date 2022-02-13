@@ -2,6 +2,8 @@
 %include "memory.inc"
 %include "string.inc"
 
+section .text
+
 ; lexer object
 ;
 ; struct {
@@ -33,6 +35,31 @@ _new_lexer:
 ; }
 
 SIZEOF_TOKEN              equ 32
+
+; input:
+;   rax - address of token
+; output:
+;   rax - token type
+global _token_type
+_token_type:
+    push rbx
+    mov rbx, rax
+    mov rax, [rbx+0]
+    pop rbx
+    ret
+
+; input:
+;   rax - address of token
+; output:
+;   rax - value of token
+global _token_value
+_token_value:
+    push rbx
+    mov rbx, rax
+    mov rax, [rbx+24]
+    pop rbx
+    ret
+        
 
 ; input:
 ;   rsi - address of lexer object
@@ -138,7 +165,7 @@ _next_token:
     push rbx
     mov rbx, rax   ; token 
     mov [rbx+16], r15
-    ; copy string into token 
+    ; copy string into token
     mov rax, [r12+0]  ; input string
     mov r8, [rbx+8]   ; from index
     mov r9, [rbx+16]  ; to index
