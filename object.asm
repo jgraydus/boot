@@ -119,6 +119,8 @@ _make_function_obj:
 
 section .rodata
     double_quote: db 34
+    function_string: db "<FUNCTION>"
+    list_string_tmp: db "<LIST>"
 
 section .text
 
@@ -155,6 +157,32 @@ _object_to_string:
     jmp .done
 
 .integer:
+    cmp rax, TYPE_INTEGER_OBJ
+    jne .function
+    mov rax, [rbx+8]
+    call _string_from_integer
+    jmp .done
+
+.function:
+    cmp rax, TYPE_FUNCTION_OBJ
+    jne .list
+    call _new_string
+    mov rsi, function_string
+    mov rcx, 10
+    call _append_from_buffer
+    jmp .done
+
+.list:
+    cmp rax, TYPE_LIST_OBJ
+    jne .error
+    ; TODO   print <LIST> for now
+    call _new_string
+    mov rsi, list_string_tmp
+    mov rcx, 6
+    call _append_from_buffer
+    jmp .done
+
+.error:
     ; TODO
 
 .done:

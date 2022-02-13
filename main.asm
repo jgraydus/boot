@@ -10,6 +10,8 @@
 section .bss
     input: resq 1
 
+section .rodata
+    space_character: db " "
 
 section .text
 
@@ -90,11 +92,19 @@ jmp .parse
     mov rax, r15
     call _new_parser
     mov r12, rax
-
+.parse_next:
     mov rax, r12
     call _parse_next
+    cmp rax, 0
+    je .parse_done
     call _object_to_string
-    call _print_string 
+    ; add a space
+    mov rsi, space_character
+    mov rcx, 1
+    call _append_from_buffer
+    call _print_string
+    jmp .parse_next
+.parse_done:
 
     mov rax, r15
     mov rsi, 0
