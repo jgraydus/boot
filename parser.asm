@@ -127,7 +127,7 @@ _parse_next:
     je .build_list_done
     mov rax, r14
     call _stack_pop
-    call _make_list_obj
+    call _make_pair_obj
     mov rcx, rax
     jmp .build_list
 .build_list_done:

@@ -1,6 +1,8 @@
-extern _make_list_obj
+extern _make_pair_obj
 extern _make_integer_obj
 extern _make_symbol_obj
 extern _make_function_obj
 extern _object_to_string
+extern _pair_head
+extern _pair_tail
 

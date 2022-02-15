@@ -27,7 +27,7 @@ TOKEN_INTEGER       equ 5
 TOKEN_EOF           equ 6
 
 ; object types
-TYPE_LIST_OBJ       equ 1
+TYPE_PAIR_OBJ       equ 1
 TYPE_STRING_OBJ     equ 2
 TYPE_INTEGER_OBJ    equ 3
 TYPE_SYMBOL_OBJ     equ 4

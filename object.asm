@@ -4,33 +4,52 @@
 
 section .text
 
-; list object 
+; pair object 
 ;
 ; struct {
 ;      qword,      ; type
-;      ptr,        ; address of object data
-;      ptr,        ; address of next node (for list objects)
+;      ptr,        ; address of head object
+;      ptr,        ; address of tail object
 ; }
 
-SIZEOF_LIST_OBJ         equ 24
+%define SIZEOF_PAIR_OBJ      24
 
 ; input:
-;   rax - address of object data
-;   rcx - address of next list node (should be set to 0 if there is no next node)
+;   rax - address of head object
+;   rcx - address of tail object
 ; output:
-;   rax - address of new list object
-global _make_list_obj
-_make_list_obj:
+;   rax - address of new pair object
+global _make_pair_obj
+_make_pair_obj:
     push rcx
     push rax
-    mov rax, SIZEOF_LIST_OBJ
+    mov rax, SIZEOF_PAIR_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_LIST_OBJ
+    mov qword [rax+0], TYPE_PAIR_OBJ
     pop rcx
     mov [rax+8], rcx
     pop rcx
     mov [rax+16], rcx 
     ret
+
+; input:
+;   rax - address of pair object
+; output:
+;   rax - address of head of the pair
+global _pair_head
+_pair_head:
+    mov rax, [rax+8]
+    ret
+
+; input:
+;   rax - address of pair object
+; output:
+;   rax - address of tail of the pair
+global _pair_tail
+_pair_tail:
+    mov rax, [rax+16]
+    ret
+
 
 ; integer object 
 ;
@@ -119,7 +138,6 @@ _make_function_obj:
 section .rodata
     double_quote: db 34
     function_string: db "<FUNCTION>"
-    list_string_tmp: db "<LIST>"
     nil_object: db "()"
     left_paren: db "("
     right_paren: db ")"
@@ -189,7 +207,7 @@ _object_to_string:
     jmp .done
 
 .list:
-    cmp rax, TYPE_LIST_OBJ
+    cmp rax, TYPE_PAIR_OBJ
     jne .error
     call _new_string
     mov rsi, left_paren
