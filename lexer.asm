@@ -14,15 +14,18 @@ section .text
 SIZEOF_LEXER          equ 16
 
 ; input:
-;   rsi - address of input string object
+;   rax - address of input string object
 ; output:
 ;   rax - address of lexer object
 global _new_lexer
 _new_lexer:
+    push rsi
+    mov rsi, rax
     mov rax, SIZEOF_LEXER
     call _malloc
     mov [rax+0], rsi
     mov qword [rax+8], 0
+    pop rsi
     ret
 
 ; token object
@@ -62,7 +65,7 @@ _token_value:
         
 
 ; input:
-;   rsi - address of lexer object
+;   rax - address of lexer object
 ; output:
 ;   rax - address of token object
 global _next_token
@@ -77,7 +80,7 @@ _next_token:
     push rcx
 
     ; remember the lexer object
-    mov r12, rsi
+    mov r12, rax
     ; get the length of the input
     mov rsi, [r12+0]
     call _string_length

@@ -10,7 +10,7 @@ section .text
 ; output:
 ;   rax - resulting value of evaluating the input
 global _eval
-eval:
+_eval:
     push r8
     push r9
     push r10
@@ -46,15 +46,31 @@ eval:
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
     jne .pair
-    mov rax, r9
-    mov rcx, r8
-    call _env_lookup
+    mov rax, r8
+    jmp .done
+    ;mov rax, r9
+    ;mov rcx, r8
+    ;call _env_lookup
     jmp .done
 ; evaluation of a pair is either a function application
 ; or a special form
 .pair:
     cmp rax, TYPE_PAIR_OBJ
     jne .procedure
+
+    mov rax, r8
+    call _get_pair_head
+    mov rsi, r9
+    call _eval
+    push rax
+    mov rax, r8
+    call _get_pair_tail
+    mov rsi, r9
+    call _eval
+    mov rcx, rax
+    pop rax
+    call _make_pair_obj 
+
     ; TODO
     ; define, set!, fn,  
 ; procedure object evaluates to itself
@@ -75,3 +91,5 @@ eval:
     pop r9
     pop r8
     ret
+
+
