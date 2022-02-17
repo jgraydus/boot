@@ -138,6 +138,7 @@ _start:
 
 
 .exit:
+    call _print_memory_stats
     pop r15
     pop r14
     pop r13

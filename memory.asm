@@ -10,12 +10,47 @@ section .bss
     heap:      resq 1
     next:      resq 1
     remaining: resq 1
+    print_buffer: resb 256
 
 section .data
     oom:       db "ERROR: Out of memory", 10
     omm_len:   dq 21
+    heap_size_msg: db   "heap size: ", 0
+    used_memory_msg: db "used:      ", 0
+    newline: db 10, 0
 
 section .text
+
+global _print_memory_stats
+_print_memory_stats:
+    push r8
+    mov rdi, print_buffer
+    mov rdx, 256
+    mov rsi, newline
+    call _print_zero_terminated_string
+    mov rsi, heap_size_msg
+    call _print_zero_terminated_string
+    mov qword rax, HEAP_SIZE
+    call _print_unsigned_int
+    mov rsi, newline
+    call _print_zero_terminated_string
+    mov rsi, used_memory_msg
+    call _print_zero_terminated_string
+    mov qword rax, HEAP_SIZE
+    sub rax, [remaining]
+    call _print_unsigned_int
+    mov rsi, newline
+    call _print_zero_terminated_string
+    mov r8, 256
+    sub r8, rdx
+    mov rdx, r8
+    mov rsi, print_buffer
+    call _flush_print_buffer
+    pop r8
+    ret
+    
+    
+    
 
 global _init_heap
 _init_heap:
