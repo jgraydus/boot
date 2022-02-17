@@ -312,7 +312,51 @@ _string_from_integer:
     pop r8
     ret 
 
-
+; input:
+;   rax - first string
+;   rcx - second string
+; output:
+;   rax - 1 if the strings are equal, 0 if not
+global _string_equals
+_string_equals:
+    push r8
+    push r9
+    push rbx
+    mov r8, rax
+    mov r9, rcx
+    ; if addresses are the same, it's the same object
+    cmp rax, rcx
+    je .done
+    ; if lengths are different, they can't be equal 
+    mov rax, [r8+16]
+    cmp rax, [r9+16]
+    jne .not_equal 
+    ; ok, i suppose we need to compare character by character
+    mov rbx, [r8+16]   ; length 
+    mov r8, [r8+24]    ; buffers
+    mov r9, [r9+24]
+.next_char:
+    cmp rbx, 0
+    je .done           ; no characters left to compare. they must be equal
+    mov al, [r8]
+    mov cl, [r9]
+    cmp al, cl
+    jne .not_equal
+    inc r8
+    inc r9 
+    dec rbx
+    jmp .next_char
+.not_equal:
+    mov rax, 0
+    jmp .done
+.equal:
+    mov rax, 1
+    jmp .done
+.done:
+    pop rbx
+    pop r9
+    pop r8    
+    ret
 
 
 

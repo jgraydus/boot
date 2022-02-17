@@ -13,6 +13,7 @@ section .bss
 section .rodata
     space_character: db " "
     newline: db 10
+    foobar: db "foobar"
 
 section .text
 
@@ -112,8 +113,6 @@ jmp .parse
     call _print_string
     jmp .parse_next
 .parse_done:
-
-
 
 
 .exit:

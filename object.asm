@@ -36,20 +36,39 @@ _make_pair_obj:
 ;   rax - address of pair object
 ; output:
 ;   rax - address of head of the pair
-global _pair_head
-_pair_head:
+global _get_pair_head
+_get_pair_head:
     mov rax, [rax+8]
+    ret
+
+; input:
+;   rax - address of pair to modify
+;   rcx - value to set
+; output:
+;   rax - address of pair (unchanged)
+global _set_pair_head
+_set_pair_head:
+    mov [rax+8], rcx
     ret
 
 ; input:
 ;   rax - address of pair object
 ; output:
 ;   rax - address of tail of the pair
-global _pair_tail
-_pair_tail:
+global _get_pair_tail
+_get_pair_tail:
     mov rax, [rax+16]
     ret
 
+; input:
+;   rax - address of pair to modify
+;   rcx - value to set
+; output:
+;   rax - address of pair (unchanged)
+global _set_pair_tail
+_set_pair_tail:
+    mov [rax+16], rcx
+    ret
 
 ; integer object 
 ;
@@ -58,7 +77,7 @@ _pair_tail:
 ;     qword,        ; integer value
 ; }
 
-SIZEOF_INTEGER_OBJ          equ 16
+%define SIZEOF_INTEGER_OBJ   16
 
 ; input:
 ;   rax - integer value of object
@@ -84,7 +103,7 @@ _make_integer_obj:
 ;     ptr,           ; address of string
 ; }
 
-SIZEOF_SYMBOL_OBJ           equ 16
+%define SIZEOF_SYMBOL_OBJ    16
 
 ; input:
 ;   rax - address of string
@@ -103,7 +122,7 @@ _make_symbol_obj:
 
 
 
-; function object
+; procedure object
 ;
 ; struct {
 ;     qword,            ; type
@@ -112,20 +131,20 @@ _make_symbol_obj:
 ;     ptr,              ; address of body of function
 ; }
 
-SIZEOF_FUNCTION_OBJ          equ 32
+%define SIZEOF_PROCEDURE_OBJ   32
 
 ; input:
 ;   rax - address of formal param list
 ;   rcx - address of environment
-;   rdx - address of function body
-global _make_function_obj
-_make_function_obj:
+;   rdx - address of procedure body
+global _make_procedure_obj
+_make_procedure_obj:
     push rdx
     push rcx
     push rax
-    mov rax, SIZEOF_FUNCTION_OBJ
+    mov rax, SIZEOF_PROCEDURE_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_FUNCTION_OBJ
+    mov qword [rax+0], TYPE_PROCEDURE_OBJ
     pop rcx
     mov [rax+8], rcx
     pop rcx
@@ -137,7 +156,7 @@ _make_function_obj:
 
 section .rodata
     double_quote: db 34
-    function_string: db "<FUNCTION>"
+    function_string: db "<PROCEDURE>"
     nil_object: db "()"
     left_paren: db "("
     right_paren: db ")"
@@ -192,13 +211,13 @@ _object_to_string:
 
 .integer:
     cmp rax, TYPE_INTEGER_OBJ
-    jne .function
+    jne .procedure
     mov rax, [rbx+8]
     call _string_from_integer
     jmp .done
 
-.function:
-    cmp rax, TYPE_FUNCTION_OBJ
+.procedure:
+    cmp rax, TYPE_PROCEDURE_OBJ
     jne .list
     call _new_string
     mov rsi, function_string
@@ -249,6 +268,95 @@ _object_to_string:
     pop r8
     ret
 
+
+;l input:
+;    rax - address of an object
+;    rcx - address of an object
+;  output:
+;    rax - 1 if the objects are equal, 0 otherwise
+global _obj_equals
+_obj_equals:
+    push r8
+    push r9
+    mov r8, rax
+    mov r9, rcx
+    ; if both objects are null, they are equal
+    ; if only one of them is null, they are NOT equal
+    cmp rax, 0
+    je .first_null
+    cmp rcx, 0          ; rax is not null here
+    jne .both_not_null
+    jmp .not_equal      ; rax is not null, rcx is null. not equal
+.first_null:
+    cmp rcx, 0
+    je .equal           ; both null. equal
+    jmp .not_equal      ; rax is null, rcx is not null. not equal
+.both_not_null:
+    ; check that both object have the same type
+    mov rax, [r8+0]
+    cmp rax, [r9+0]
+    jne .not_equal
+    ; compare based on object type
+    cmp rax, TYPE_PAIR_OBJ
+    jne .string
+    ; first compare the head of head pair
+    mov rax, [r8+8]
+    mov rcx, [r9+8]
+    call _obj_equals
+    cmp rax, 0
+    je .not_equal
+    ; then compare the tail of each pair
+    mov rax, [r8+16]
+    mov rcx, [r8+16]
+    call _obj_equals
+    jmp .done
+.string: 
+    cmp rax, TYPE_STRING_OBJ
+    jne .integer
+    mov rax, r8
+    mov rcx, r9
+    call _string_equals
+    jmp .done
+.integer:
+    cmp rax, TYPE_INTEGER_OBJ
+    jne .symbol
+    mov rax, [r8+8]      ; compare the integer values
+    cmp rax, [r9+8]
+    je .equal
+    jmp .not_equal
+.symbol:
+    cmp rax, TYPE_SYMBOL_OBJ
+    jne .function
+    mov rax, [r8+8]      ; compare the string values
+    mov rcx, [r9+8]
+    call _obj_equals
+    jmp .done
+.function:
+    cmp rax, TYPE_PROCEDURE_OBJ
+    jne .not_equal
+    ; functions are unique, so can only be equal to themselves
+    cmp r8, r9
+    jne .not_equal
+    jmp .equal
+.equal:
+    mov rax, 1
+    jmp .done
+.not_equal:
+    mov rax, 0
+.done:
+    pop r9
+    pop r8
+    ret
+
+
+; input:
+;   rax - address of object
+; output:
+;   rax - type tag of object
+global _obj_type
+_obj_type:
+    mov rax, [rax+0]
+    ret
 
 
 
