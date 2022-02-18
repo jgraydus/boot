@@ -288,6 +288,20 @@ _make_procedure_obj:
     call _gc_register_obj
     ret
 
+global _get_proc_formal_params
+_get_proc_formal_params:
+    mov rax, [rax+8]
+    ret
+
+global _get_proc_env
+_get_proc_env:
+    mov rax, [rax+16]
+    ret
+
+global _get_proc_body
+_get_proc_body:
+    mov rax, [rax+24]
+    ret
 
 section .rodata
     double_quote: db 34

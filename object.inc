@@ -3,6 +3,9 @@ extern _make_pair_obj
 extern _make_integer_obj
 extern _make_symbol_obj
 extern _make_procedure_obj
+extern _get_proc_formal_params
+extern _get_proc_env
+extern _get_proc_body
 extern _object_to_string
 extern _get_pair_head
 extern _set_pair_head

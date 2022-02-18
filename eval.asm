@@ -48,7 +48,7 @@ _eval:
     mov rcx, r8
     call _env_lookup
     jmp .done
-.bool
+.bool:
     mov rax, r8
     jmp .done
 .pair:
@@ -127,6 +127,9 @@ _eval:
     call _make_procedure_obj
     jmp .done
 .quote:
+    ; TODO with this implementation quote just returns its argument unchanged
+    ; however, it should really walk through the body of the argument and 
+    ; evaluate any unquoted symbols
     mov rax, r10
     call _symbol_is_quote
     jne .if
@@ -169,7 +172,17 @@ _eval:
     jmp .done
 ; end of special forms
 .apply_proc:
-
+    mov rax, r8
+    call _get_pair_head
+    call _eval
+    mov r10, rax
+    mov rax, r8
+    call _get_pair_tail
+    call _eval_params
+    mov rdx, rax
+    mov rax, r10
+    call _apply
+    jmp .done
 .other:
     ; other object types evaluate to themselves
     mov rax, r8
@@ -188,13 +201,92 @@ _eval:
     ret
 
 ; input:
-;   rax - address of procedure object
+;   rax - address of a list
 ;   rsi - address of environment
-;   rdi - address of argument list
+; output:
+;   rax - address of a new list consisting of the result of evaluating everything from the input list
+_eval_params:
+    push r8
+    push r9
+    cmp rax, 0
+    je .done
+    mov r8, rax
+    call _get_pair_head     ; subtle but important point:
+    call _eval              ; this is evaluating the function params from left to right
+    mov r9, rax
+    mov r8, rax
+    call _get_pair_tail
+    call _eval_params
+    mov rcx, rax
+    mov rax, r9
+    call _make_pair_obj
+.done:
+    pop r9
+    pop r8
+    ret
+
+; input:
+;   rax - address of parent env
+;   rcx - address of formal param list
+;   rdx - address of arguments
+_extend_env:
+    push rsi
+    push rdi
+    push r8
+    push r9
+    push r10
+    mov r9, rcx
+    mov r10, rdx
+    ; create a new environment
+    call _make_env
+    mov r8, rax
+    ; bind each formal param to the corresponding argument
+.next:
+    mov rax, r9
+    cmp rax, 0
+    je .done          ; no more formal parameters
+    call _get_pair_head
+    mov rsi, rax      ; symbol to bind
+    mov rax, r10
+    call _get_pair_head
+    mov rdi, rax      ; value to bind
+    ; add the binding to the env
+    mov rax, r8       ; env
+    call _env_add_binding
+    ; increment to next formal param and value
+    mov rax, r9
+    call _get_pair_tail
+    mov r9, rax
+    mov rax, r10
+    call _get_pair_tail
+    mov r10, rax    
+.done:
+    mov rax, r8
+    pop r10
+    pop r9
+    pop r8
+    pop rdi
+    pop rsi
+    ret
+
+; input:
+;   rax - address of procedure object
+;   rdx - address of argument list
 ; output:
 ;   rax - result of procedure application
 _apply:
-    
+    push r8
+    mov r8, rax
+    call _get_proc_formal_params
+    mov rcx, rax
+    mov rax, r8
+    call _get_proc_env
+    call _extend_env
+    mov rsi, rax
+    mov rax, r8
+    call _get_proc_body
+    call _eval
+    pop r8 
     ret
 
 
