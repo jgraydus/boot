@@ -18,7 +18,7 @@ _make_env:
     push rcx
     mov rcx, 0
     call _make_pair_obj 
-    push rcx
+    pop rcx
     ret
 
 ; input:
@@ -38,6 +38,7 @@ _env_add_binding:
     call _make_pair_obj
     mov r9, rax
     ; get the binding list and add new binding
+    mov rax, r8
     call _get_pair_tail
     mov rcx, rax    ; old bindings are tail of new bindings
     mov rax, r9
@@ -79,6 +80,7 @@ _lookup_binding:
     call _obj_equals
     je .found
     mov rax, r10        ; binding list
+.here:
     call _get_pair_tail ; replace with its tail
     mov r10, rax
     jmp .next_binding
@@ -115,6 +117,8 @@ _env_lookup:
     call _get_pair_tail
 .done:
     ret
+
+
 
 
 

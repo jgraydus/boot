@@ -121,6 +121,74 @@ _make_symbol_obj:
    ret
 
 
+section .data
+     define_txt: db "define"
+     set_txt:    db "set!"
+     fn_txt:     db "fn"
+
+section .txt
+
+; input:
+;   rax - address of symbol
+; ouptut:
+;   rax - 1 if the symbol is define, 0 otherwise
+global _symbol_is_define
+_symbol_is_define:
+    push r8
+    push r9
+    mov r8, [rax+0]
+    cmp r8, TYPE_SYMBOL_OBJ
+    jne .done
+    mov rax, [rax+8]
+    mov r8, define_txt
+    mov r9, 6
+    call _string_equals_buffer
+.done:
+    pop r9
+    pop r8
+    ret
+
+; input:
+;   rax - address of symbol
+; ouptut:
+;   rax - 1 if the symbol is set!, 0 otherwise
+
+global _symbol_is_set
+_symbol_is_set:
+    push r8
+    push r9
+    mov r8, [rax+0]
+    cmp r8, TYPE_SYMBOL_OBJ
+    jne .done
+    mov rax, [rax+8]
+    mov r8, set_txt
+    mov r9, 6
+    call _string_equals_buffer
+.done:
+    pop r9
+    pop r8
+    ret
+
+; input:
+;   rax - address of symbol
+; ouptut:
+;   rax - 1 if the symbol is fn, 0 otherwise
+global _symbol_is_fn
+_symbol_is_fn:
+    push r8
+    push r9
+    mov r8, [rax+0]
+    cmp r8, TYPE_SYMBOL_OBJ
+    jne .done
+    mov rax, [rax+8]
+    mov r8, fn_txt
+    mov r9, 6
+    call _string_equals_buffer
+.done:
+    pop r9
+    pop r8
+    ret
+
 
 ; procedure object
 ;
@@ -161,6 +229,7 @@ section .rodata
     left_paren: db "("
     right_paren: db ")"
     space: db " "
+    pair_sep: db " . "
 
 section .text
 
@@ -172,10 +241,11 @@ global _object_to_string
 _object_to_string:
     push r8
     push r9
+    push r10
+    push r11
     push rcx
     push rsi
     push rbx
-
     ; check for nil
     cmp rax, 0
     jne .go
@@ -184,17 +254,14 @@ _object_to_string:
     mov rcx, 2
     call _append_from_buffer
     jmp .done
-
 .go:
     mov rbx, rax
     mov rax, [rbx+0]   
-
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
     jne .string
     mov rax, [rbx+8]
     jmp .done
-
 .string:
     cmp rax, TYPE_STRING_OBJ
     jne .integer
@@ -208,24 +275,56 @@ _object_to_string:
     mov rcx, 1
     call _append_from_buffer
     jmp .done
-
 .integer:
     cmp rax, TYPE_INTEGER_OBJ
     jne .procedure
     mov rax, [rbx+8]
     call _string_from_integer
     jmp .done
-
 .procedure:
     cmp rax, TYPE_PROCEDURE_OBJ
-    jne .list
+    jne .pair
     call _new_string
     mov rsi, function_string
     mov rcx, 10
     call _append_from_buffer
     jmp .done
-
+.pair:
+    cmp rax, TYPE_PAIR_OBJ
+    jne .error
+    ; if tail is not nil or a list, print as a dotted pair
+    mov rax, [rbx+16]
+    cmp rax, 0
+    je .list
+    mov rax, [rax+0]
+    cmp rax, TYPE_PAIR_OBJ
+    je .list
+    ; head to string
+    mov rax, [rbx+8]
+    call _object_to_string
+    mov r10, rax
+    ; tail to string
+    mov rax, [rbx+16]
+    call _object_to_string
+    mov r11, rax
+    ; build the string
+    call _new_string
+    mov rsi, left_paren           ; (
+    mov rcx, 1
+    call _append_from_buffer
+    mov rsi, r10                  ; <head> 
+    call _string_append
+    mov rsi, pair_sep             ; " . "
+    mov rcx, 3
+    call _append_from_buffer
+    mov rsi, r11                  ; <tail>
+    call _string_append
+    mov rsi, right_paren          ; )
+    mov rcx, 1
+    call _append_from_buffer
+    jmp .done 
 .list:
+    mov rax, [rbx+0]
     cmp rax, TYPE_PAIR_OBJ
     jne .error
     call _new_string
@@ -256,14 +355,14 @@ _object_to_string:
     mov rcx, 1
     call _append_from_buffer
     jmp .done
-
 .error:
     ; TODO
-
 .done:
     pop rbx
     pop rsi
     pop rcx
+    pop r11
+    pop r10
     pop r9
     pop r8
     ret

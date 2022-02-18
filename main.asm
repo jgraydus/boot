@@ -96,6 +96,64 @@ _print_newline:
     call _print_string
     ret
 
+section .rodata
+    x: db "x"
+    y: db "y"
+    z: db "z"
+section .text
+
+_make_environment:
+    push r8        
+    push r9
+    push r10
+    mov rax, 0
+    call _make_env
+    mov r8, rax
+    ; bind x to 1
+    call _new_string
+    mov rsi, x
+    mov rcx, 1
+    call _append_from_buffer
+    call _make_symbol_obj
+    mov r9, rax
+    mov rax, 1
+    call _make_integer_obj
+    mov rdi, rax
+    mov rsi, r9
+    mov rax, r8
+    call _env_add_binding
+    ; bind y to 2
+    call _new_string
+    mov rsi, y
+    mov rcx, 1
+    call _append_from_buffer
+    call _make_symbol_obj
+    mov r9, rax
+    mov rax, 2
+    call _make_integer_obj
+    mov rdi, rax
+    mov rsi, r9
+    mov rax, r8
+    call _env_add_binding
+    ; bind z to 3
+    call _new_string
+    mov rsi, z
+    mov rcx, 1
+    call _append_from_buffer
+    call _make_symbol_obj
+    mov r9, rax
+    mov rax, 3
+    call _make_integer_obj
+    mov rdi, rax
+    mov rsi, r9
+    mov rax, r8
+    call _env_add_binding
+    ; done
+    mov rax, r8
+    pop r10
+    pop r9
+    pop r8
+    ret
 
 global _start
 _start:
@@ -116,6 +174,12 @@ _start:
     call _print_newline
 ;jmp .exit
 
+    call _make_environment
+    mov r13, rax
+    ;call _object_to_string
+    ;call _print_string
+;jmp .exit
+
 .parse:
     mov rax, r15
     call _new_parser
@@ -125,6 +189,7 @@ _start:
     call _parse_next
     cmp rax, -1
     je .parse_done
+    mov rsi, r13   ; environment
     call _eval
     call _object_to_string
     ; add a space

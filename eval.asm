@@ -24,39 +24,52 @@ _eval:
     mov r9, rsi    ; environment
     ; null evaluates to null
     cmp r8, 0
-    jne .string
+    jne .go
     mov rax, 0
     jmp .done
+.go:
     ; get the type tag for the object
     mov rax, r8
     call _obj_type
-; strings evaluate to themselves
-.string:
-    cmp rax, TYPE_STRING_OBJ
-    jne .integer
-    mov rax, r8
-    jmp .done
-; integers evaluate to themselves
-.integer:
-    cmp rax, TYPE_INTEGER_OBJ
-    jne .symbol
-    mov rax, r8
-    jmp .done
-; look up symbol in the environment
 .symbol:
+    ; look up symbol in the environment
     cmp rax, TYPE_SYMBOL_OBJ
     jne .pair
+    mov rax, r9
+    mov rcx, r8
+    call _env_lookup
+    jmp .done
+.pair:
+    ; evaluation of a pair is either a function application
+    ; or a special form
+    cmp rax, TYPE_PAIR_OBJ
+    jne .other
+    ; 
     mov rax, r8
     jmp .done
-    ;mov rax, r9
-    ;mov rcx, r8
-    ;call _env_lookup
+    call _get_pair_head
+    mov r10, rax
+
+.define:
+    call _symbol_is_define
+    cmp rax, 1
+    jne .set
+    ; TODO
     jmp .done
-; evaluation of a pair is either a function application
-; or a special form
-.pair:
-    cmp rax, TYPE_PAIR_OBJ
-    jne .procedure
+.set:
+    mov rax, r10
+    call _symbol_is_set
+    cmp rax, 1
+    jne .fn
+    ; TODO
+    jmp .done
+.fn:
+    mov rax, r10
+    call _symbol_is_fn
+    cmp rax, 1
+    jne .other
+    ; TODO
+    jmp .done
 
     mov rax, r8
     call _get_pair_head
@@ -73,10 +86,9 @@ _eval:
 
     ; TODO
     ; define, set!, fn,  
-; procedure object evaluates to itself
-.procedure:
-    cmp rax, TYPE_PROCEDURE_OBJ
-    jne .error
+.other:
+    ; other object types evaluate to themselves
+    ; strings evaluate to themselves
     mov rax, r8
     jmp .done
 .error:

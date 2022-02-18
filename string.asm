@@ -359,6 +359,50 @@ _string_equals:
     ret
 
 
+; input:
+;    r8 - address of first char buffer
+;    r9 - first char buffer length
+;    r10 - address of second char buffer
+;    r11 - second char buffer length 
+; output:
+;    rax - 1 if the two buffers have the same contents, 0 otherwise
+_char_buffer_equals:
+    cmp r9, r11       ; if lengths are different, not equal
+    jne .not_equal
+.loop:
+    cmp r9, 0
+    je .equal
+    mov al, [r8]
+    cmp al, [r10]
+    jne .not_equal
+    inc r8
+    inc r10
+    dec r9
+    jmp .loop
+.not_equal:
+    mov rax, 0
+    jmp .done
+.equal:
+    mov rax, 1
+.done:
+    ret
+
+; input:
+;   rax - string object
+;   r8 - address of character buffer
+;   r9 - length of character buffer 
+; output:
+;   rax - 0 if the string contains the same characters as the given buffer, 0 otherwise
+global _string_equals_buffer
+_string_equals_buffer:
+    push r10
+    push r11
+    mov r10, [rax+24]   ; address of string's buffer
+    mov r11, [rax+16]   ; buffer length
+    call _char_buffer_equals
+    pop r11
+    pop r10
+    ret
 
 
 

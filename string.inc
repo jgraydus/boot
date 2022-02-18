@@ -8,4 +8,5 @@ extern _string_char_at
 extern _substring
 extern _string_from_integer
 extern _string_equals
+extern _string_equals_buffer
 
