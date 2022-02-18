@@ -2,7 +2,7 @@ extern _gc_init
 extern _make_pair_obj
 extern _make_integer_obj
 extern _make_symbol_obj
-extern _make_function_obj
+extern _make_procedure_obj
 extern _object_to_string
 extern _get_pair_head
 extern _set_pair_head

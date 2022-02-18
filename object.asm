@@ -353,7 +353,7 @@ _object_to_string:
     jne .pair
     call _new_string
     mov rsi, function_string
-    mov rcx, 10
+    mov rcx, 11
     call _append_from_buffer
     jmp .done
 .pair:

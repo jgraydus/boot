@@ -80,7 +80,22 @@ _eval:
     call _symbol_is_fn
     cmp rax, 1
     jne .quote
-    ; TODO 
+    ; get the param list
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov r10, rax
+    ; get the body
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_head
+    mov r11, rax
+    ; build proc object
+    mov rax, r10                ; formal param list
+    mov rcx, r9                 ; env
+    mov rdx, r11                ; body of fn
+    call _make_procedure_obj
     jmp .done
 .quote:
     mov rax, r10
@@ -95,7 +110,6 @@ _eval:
 
 .other:
     ; other object types evaluate to themselves
-    ; strings evaluate to themselves
     mov rax, r8
     jmp .done
 .error:
