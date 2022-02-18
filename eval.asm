@@ -32,12 +32,24 @@ _eval:
     mov rax, r8
     call _obj_type
 .symbol:
-    ; look up symbol in the environment
     cmp rax, TYPE_SYMBOL_OBJ
     jne .pair
+    ; #t and #f evaluate to themselves
+    mov rax, r8
+    call _symbol_is_true
+    cmp rax, 1
+    je .bool
+    mov rax, r8
+    call _symbol_is_false
+    cmp rax, 1
+    je .bool
+    ; look up symbol in the environment
     mov rax, r9
     mov rcx, r8
     call _env_lookup
+    jmp .done
+.bool
+    mov rax, r8
     jmp .done
 .pair:
     ; evaluation of a pair is either a function application
@@ -117,10 +129,43 @@ _eval:
 .quote:
     mov rax, r10
     call _symbol_is_quote
-    jne .apply_proc
+    jne .if
     mov rax, r8
     call _get_pair_tail
     call _get_pair_head
+    jmp .done
+.if:
+    mov rax, r10
+    call _symbol_is_if
+    jne .apply_proc
+    ; get and evaluate the condition
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov rsi, r9
+    call _eval
+    ; if the condition evaluates to nil or #f
+    cmp rax, 0
+    je .false_branch
+    call _symbol_is_false
+    cmp rax, 1
+    je .false_branch
+    ; evaluate the true branch
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_head
+    mov rsi, r9
+    call _eval
+    jmp .done
+.false_branch: 
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_head
+    mov rsi, r9
+    call _eval
     jmp .done
 ; end of special forms
 .apply_proc:
@@ -141,5 +186,25 @@ _eval:
     pop r9
     pop r8
     ret
+
+; input:
+;   rax - address of procedure object
+;   rsi - address of environment
+;   rdi - address of argument list
+; output:
+;   rax - result of procedure application
+_apply:
+    
+    ret
+
+
+
+
+
+
+
+
+
+
 
 

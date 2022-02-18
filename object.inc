@@ -14,4 +14,9 @@ extern _symbol_is_define
 extern _symbol_is_set
 extern _symbol_is_fn
 extern _symbol_is_quote
+extern _symbol_is_if
+extern _symbol_true
+extern _symbol_is_true
+extern _symbol_false
+extern _symbol_is_false
 

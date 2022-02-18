@@ -159,6 +159,28 @@ section .data
      set_txt:    db "set!"
      fn_txt:     db "fn"
      quote_txt:  db "quote"
+     if_txt:     db "if"
+     true_txt:   db "#t"
+     false_txt:  db "#f"
+
+%macro _symbol_is 2
+    push r8
+    push r9
+    mov r8, [rax+0]
+    cmp r8, TYPE_SYMBOL_OBJ
+    jne .not
+    mov rax, [rax+8]
+    mov r8, %1    ; buffer
+    mov r9, %2    ; length
+    call _string_equals_buffer
+    jmp .done
+.not:
+    mov rax, 0
+.done:
+    pop r9
+    pop r8
+    ret
+%endmacro
 
 section .text
 
@@ -168,22 +190,7 @@ section .text
 ;   rax - 1 if the symbol is define, 0 otherwise
 global _symbol_is_define
 _symbol_is_define:
-    push r8
-    push r9
-    mov r8, [rax+0]
-    cmp r8, TYPE_SYMBOL_OBJ
-    jne .not
-    mov rax, [rax+8]
-    mov r8, define_txt
-    mov r9, 6
-    call _string_equals_buffer
-    jmp .done
-.not:
-    mov rax, 0
-.done:
-    pop r9
-    pop r8
-    ret
+    _symbol_is define_txt, 6
 
 ; input:
 ;   rax - address of symbol
@@ -192,22 +199,7 @@ _symbol_is_define:
 
 global _symbol_is_set
 _symbol_is_set:
-    push r8
-    push r9
-    mov r8, [rax+0]
-    cmp r8, TYPE_SYMBOL_OBJ
-    jne .not
-    mov rax, [rax+8]
-    mov r8, set_txt
-    mov r9, 4
-    call _string_equals_buffer
-    jmp .done
-.not:
-    mov rax, 0
-.done:
-    pop r9
-    pop r8
-    ret
+    _symbol_is set_txt, 4
 
 ; input:
 ;   rax - address of symbol
@@ -215,22 +207,7 @@ _symbol_is_set:
 ;   rax - 1 if the symbol is fn, 0 otherwise
 global _symbol_is_fn
 _symbol_is_fn:
-    push r8
-    push r9
-    mov r8, [rax+0]
-    cmp r8, TYPE_SYMBOL_OBJ
-    jne .not
-    mov rax, [rax+8]
-    mov r8, fn_txt
-    mov r9, 2
-    call _string_equals_buffer
-    jmp .done
-.not:
-    mov rax, 0
-.done:
-    pop r9
-    pop r8
-    ret
+    _symbol_is fn_txt, 2
 
 ; input:
 ;   rax - address of symbol
@@ -238,21 +215,44 @@ _symbol_is_fn:
 ;   rax - 1 if the symbol is quote, 0 otherwise
 global _symbol_is_quote
 _symbol_is_quote:
-    push r8
-    push r9
-    mov r8, [rax+0]
-    cmp r8, TYPE_SYMBOL_OBJ
-    jne .not
-    mov rax, [rax+8]
-    mov r8, quote_txt
-    mov r9, 5
-    call _string_equals_buffer
-    jmp .done
-.not:
-    mov rax, 0
-.done:
-    pop r9
-    pop r8
+    _symbol_is quote_txt, 5
+
+global _symbol_is_if
+_symbol_is_if:
+    _symbol_is if_txt, 2
+
+global _symbol_is_true
+_symbol_is_true:
+    _symbol_is true_txt, 2
+
+global _symbol_is_false
+_symbol_is_false:
+    _symbol_is false_txt, 2
+
+global _symbol_true
+_symbol_true:
+    push rsi
+    push rcx
+    call _new_string
+    mov rsi, true_txt
+    mov rcx, 2
+    call _append_from_buffer
+    call _make_symbol_obj
+    pop rcx
+    pop rsi
+    ret
+
+global _symbol_false
+_symbol_false:
+    push rsi
+    push rcx
+    call _new_string
+    mov rsi, true_txt
+    mov rcx, 2
+    call _append_from_buffer
+    call _make_symbol_obj
+    pop rcx
+    pop rsi
     ret
 
 ; procedure object
