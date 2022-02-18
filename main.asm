@@ -198,6 +198,10 @@ _start:
     call _append_from_buffer
     call _print_string
     call _print_newline
+    mov rax, r13
+    call _object_to_string
+    call _print_string
+    call _print_newline
     jmp .parse_next
 .parse_done:
 

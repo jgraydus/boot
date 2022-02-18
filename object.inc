@@ -12,4 +12,5 @@ extern _obj_type
 extern _symbol_is_define
 extern _symbol_is_set
 extern _symbol_is_fn
+extern _symbol_is_quote
 

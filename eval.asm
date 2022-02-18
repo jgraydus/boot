@@ -44,17 +44,29 @@ _eval:
     ; or a special form
     cmp rax, TYPE_PAIR_OBJ
     jne .other
-    ; 
     mov rax, r8
-    jmp .done
     call _get_pair_head
     mov r10, rax
-
+; special forms
 .define:
     call _symbol_is_define
     cmp rax, 1
     jne .set
-    ; TODO
+    mov rax, r8
+    call _get_pair_tail
+    mov r11, rax
+    call _get_pair_head    ; this is the symbol to bind
+    mov r12, rax          
+    mov rax, r11
+    call _get_pair_tail
+    call _get_pair_head    ; this is the value to bind
+    mov rsi, r9
+    call _eval
+    mov rdi, rax   ; value
+    mov rsi, r12   ; symbol
+    mov rax, r9    ; env
+    call _env_add_binding
+    mov rax, 0   ; the result is nil
     jmp .done
 .set:
     mov rax, r10
@@ -67,25 +79,20 @@ _eval:
     mov rax, r10
     call _symbol_is_fn
     cmp rax, 1
-    jne .other
-    ; TODO
+    jne .quote
+    ; TODO 
     jmp .done
-
-    mov rax, r8
-    call _get_pair_head
-    mov rsi, r9
-    call _eval
-    push rax
+.quote:
+    mov rax, r10
+    call _symbol_is_quote
+    jne .apply_proc
     mov rax, r8
     call _get_pair_tail
-    mov rsi, r9
-    call _eval
-    mov rcx, rax
-    pop rax
-    call _make_pair_obj 
+    call _get_pair_head
+    jmp .done
+; end of special forms
+.apply_proc:
 
-    ; TODO
-    ; define, set!, fn,  
 .other:
     ; other object types evaluate to themselves
     ; strings evaluate to themselves
