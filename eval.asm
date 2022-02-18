@@ -73,7 +73,24 @@ _eval:
     call _symbol_is_set
     cmp rax, 1
     jne .fn
-    ; TODO
+    ; get the symbol
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov r10, rax
+    ; get the value
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_head
+    mov rsi, r9
+    call _eval
+    ; update the environment
+    mov rdx, rax
+    mov rax, r9
+    mov rcx, r10
+    call _env_set_binding
+    mov rax, 0     ; result of set! is nil
     jmp .done
 .fn:
     mov rax, r10

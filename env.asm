@@ -118,9 +118,16 @@ _env_lookup:
 .done:
     ret
 
-
-
-
+; input:
+;   rax - address of environment
+;   rcx - address of symbol which must be bound in the environment
+;   rdx - address of value to replace the current value bound to symbol
+global _env_set_binding
+_env_set_binding:
+    call _lookup_binding
+    mov rcx, rdx
+    call _set_pair_tail 
+    ret
 
 
 
