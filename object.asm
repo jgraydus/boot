@@ -125,6 +125,14 @@ _make_integer_obj:
     pop rcx
     ret
 
+; input:
+;   rax - address of integer object
+; output:
+;   rax - integer value
+global _integer_get_value
+_integer_get_value:
+    mov rax, [rax+8]
+    ret
 
 
 ; symbol object
@@ -285,6 +293,7 @@ _make_procedure_obj:
     mov [rax+16], rcx
     pop rcx
     mov [rax+24], rcx
+    mov qword [rax+32], 0
     call _gc_register_obj
     ret
 
@@ -301,6 +310,40 @@ _get_proc_env:
 global _get_proc_body
 _get_proc_body:
     mov rax, [rax+24]
+    ret
+
+%define INTRINSIC_PROC_FLAG 2
+
+; input:
+;   rax - pointer to native code
+; output:
+;   rax - address of new procedure object wrapping the given native code
+global _make_intrinsic_obj
+_make_intrinsic_obj:
+    push r8
+    mov r8, rax
+    mov rax, SIZEOF_PROCEDURE_OBJ
+    call _malloc
+    mov qword [rax+0], TYPE_PROCEDURE_OBJ
+    mov qword [rax+8], 0
+    mov qword [rax+16], 0
+    mov [rax+24], r8
+    mov qword [rax+32], INTRINSIC_PROC_FLAG
+    call _gc_register_obj
+    pop r8
+    ret
+
+global _proc_is_intrinsic
+_proc_is_intrinsic:
+    mov rax, [rax+32]
+    and rax, INTRINSIC_PROC_FLAG
+    cmp rax, INTRINSIC_PROC_FLAG
+    je .yes
+    mov rax, 0
+    jmp .done
+.yes:
+    mov rax, 1
+.done:
     ret
 
 section .rodata

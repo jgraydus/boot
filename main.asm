@@ -1,6 +1,7 @@
 %include "constants.inc"
 %include "env.inc"
 %include "eval.inc"
+%include "intrinsics.inc"
 %include "lexer.inc"
 %include "memory.inc"
 %include "object.inc"
@@ -176,6 +177,7 @@ _start:
 
     call _make_environment
     mov r13, rax
+    call _add_intrinsics_to_env
     ;call _object_to_string
     ;call _print_string
 ;jmp .exit

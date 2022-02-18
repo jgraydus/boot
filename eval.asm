@@ -208,19 +208,19 @@ _eval:
 _eval_params:
     push r8
     push r9
+    mov r8, rax
     cmp rax, 0
     je .done
-    mov r8, rax
-    call _get_pair_head     ; subtle but important point:
-    call _eval              ; this is evaluating the function params from left to right
+    call _get_pair_head
+    call _eval
     mov r9, rax
-    mov r8, rax
+    mov rax, r8
     call _get_pair_tail
-    call _eval_params
+    call _eval_params 
     mov rcx, rax
     mov rax, r9
-    call _make_pair_obj
-.done:
+    call _make_pair_obj 
+.done
     pop r9
     pop r8
     ret
@@ -277,6 +277,10 @@ _extend_env:
 _apply:
     push r8
     mov r8, rax
+    call _proc_is_intrinsic
+    cmp rax, 1
+    je .intrinsic 
+    mov rax, r8
     call _get_proc_formal_params
     mov rcx, rax
     mov rax, r8
@@ -286,8 +290,16 @@ _apply:
     mov rax, r8
     call _get_proc_body
     call _eval
+.done:
     pop r8 
     ret
+.intrinsic:
+    mov rax, r8
+    call _get_proc_body
+    mov r8, rax
+    mov rax, rdx
+    call r8
+    jmp .done
 
 
 
