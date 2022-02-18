@@ -105,15 +105,62 @@ _vec_append:
     ret
 
 ; input:
+;   rax - address of the vec
+;   rsi - index of item to remove
+; output:
+;   rax - the removed value
+global _vec_remove
+_vec_remove:
+    push r8
+    push r9
+    push r10
+    mov r8, rax   ; vec
+    mov r9, rsi   ; index
+    call _vec_get_value_at
+    mov r10, rax  ; removed value
+    ; move item in last position to this position
+    mov rax, r8
+    mov rsi, [rax+8]   ; contents size
+    sub rsi, 1         ; index of last item
+    call _vec_get_value_at
+    mov rdi, rax
+    mov rax, r8
+    mov rsi, r9
+    call _vec_set_value_at
+    ; decrement size
+    mov rax, [r8+8]
+    dec rax
+    mov [r8+8], rax
+    ; done
+    mov rax, r10
+    pop r10
+    pop r9
+    pop r8
+    ret
+
+; input:
 ;   rax - address of vec
 ;   rsi - index of value
 ; output:
 ;   rax - value at given index
-global _vec_value_at
-_vec_value_at:
+global _vec_get_value_at
+_vec_get_value_at:
     shl rsi, 3         ; multiply by 8
     add rsi, [rax+16]  ; add start of buffer
     mov rax, [rsi] 
+    ret
+
+; input:
+;   rax - address of vec
+;   rsi - index of value
+;   rdi - value
+; ouput:
+;   rax - address of vec (unchanged)
+global _vec_set_value_at
+_vec_set_value_at:
+    shl rsi, 3         ; multiply by 8
+    add rsi, [rax+16]  ; add start of buffer
+    mov [rsi], rdi
     ret
 
 ; input:

@@ -92,7 +92,7 @@ _malloc:
     mov r10, r9
     mov r9, [r9+0]    ; go to next chunk in free list
     jmp .next
-.reuse
+.reuse:
     mov r11, [r9+0]   ; get pointer to chunk after this one
     cmp r10, 0        ; if the previous chunk is null, then we're replacing the head of the free list
     je .new_head    

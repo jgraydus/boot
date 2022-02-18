@@ -67,7 +67,7 @@ _stack_pop:
     mov [rbx+8], rax
     mov rsi, rax       ; index of last item
     mov rax, [rbx+0]   ; vec
-    call _vec_value_at
+    call _vec_get_value_at
 .done:
     pop rbx
     ret

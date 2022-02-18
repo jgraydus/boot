@@ -1,8 +1,35 @@
 %include "constants.inc"
 %include "memory.inc"
 %include "string.inc"
+%include "vec.inc"
+
+section .bss
+    gc_registry: resq 1
 
 section .text
+
+global _gc_init
+_gc_init:
+    push rax
+    mov qword rax, 1024
+    call _new_vec
+    mov [gc_registry], rax
+    pop rax
+    ret
+
+; input:
+;   rax - address of object
+; output:
+;   rax - address of object (unchanged)
+_gc_register_obj:
+    push rax
+    push rsi
+    mov rsi, rax
+    mov rax, [gc_registry]
+    call _vec_append
+    pop rsi
+    pop rax
+    ret
 
 ; pair object 
 ;
@@ -10,9 +37,10 @@ section .text
 ;      qword,      ; type
 ;      ptr,        ; address of head object
 ;      ptr,        ; address of tail object
+;      qword,      ; flags
 ; }
 
-%define SIZEOF_PAIR_OBJ      24
+%define SIZEOF_PAIR_OBJ      32
 
 ; input:
 ;   rax - address of head object
@@ -29,7 +57,8 @@ _make_pair_obj:
     pop rcx
     mov [rax+8], rcx
     pop rcx
-    mov [rax+16], rcx 
+    mov [rax+16], rcx
+    call _gc_register_obj
     ret
 
 ; input:
@@ -75,9 +104,10 @@ _set_pair_tail:
 ; struct {
 ;     qword,        ; type
 ;     qword,        ; integer value
+;     qword,        ; flags
 ; }
 
-%define SIZEOF_INTEGER_OBJ   16
+%define SIZEOF_INTEGER_OBJ   24
 
 ; input:
 ;   rax - integer value of object
@@ -91,6 +121,7 @@ _make_integer_obj:
     call _malloc
     mov qword [rax+0], TYPE_INTEGER_OBJ
     mov [rax+8], rcx
+    call _gc_register_obj
     pop rcx
     ret
 
@@ -101,9 +132,10 @@ _make_integer_obj:
 ; struct {
 ;     qword,         ; type
 ;     ptr,           ; address of string
+;     qword,         ; flags
 ; }
 
-%define SIZEOF_SYMBOL_OBJ    16
+%define SIZEOF_SYMBOL_OBJ    24
 
 ; input:
 ;   rax - address of string
@@ -117,6 +149,7 @@ _make_symbol_obj:
    call _malloc
    mov qword [rax+0], TYPE_SYMBOL_OBJ
    mov [rax+8], rcx
+   call _gc_register_obj
    pop rcx
    ret
 
@@ -145,7 +178,7 @@ _symbol_is_define:
     mov r9, 6
     call _string_equals_buffer
     jmp .done
-.not
+.not:
     mov rax, 0
 .done:
     pop r9
@@ -169,7 +202,7 @@ _symbol_is_set:
     mov r9, 4
     call _string_equals_buffer
     jmp .done
-.not
+.not:
     mov rax, 0
 .done:
     pop r9
@@ -192,7 +225,7 @@ _symbol_is_fn:
     mov r9, 2
     call _string_equals_buffer
     jmp .done
-.not
+.not:
     mov rax, 0
 .done:
     pop r9
@@ -215,7 +248,7 @@ _symbol_is_quote:
     mov r9, 5
     call _string_equals_buffer
     jmp .done
-.not
+.not:
     mov rax, 0
 .done:
     pop r9
@@ -229,9 +262,10 @@ _symbol_is_quote:
 ;     ptr,              ; address of formal parameters (list of symbols)
 ;     ptr,              ; address of environment
 ;     ptr,              ; address of body of function
+;     qword,            ; flags
 ; }
 
-%define SIZEOF_PROCEDURE_OBJ   32
+%define SIZEOF_PROCEDURE_OBJ   40
 
 ; input:
 ;   rax - address of formal param list
@@ -251,6 +285,7 @@ _make_procedure_obj:
     mov [rax+16], rcx
     pop rcx
     mov [rax+24], rcx
+    call _gc_register_obj
     ret
 
 

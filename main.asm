@@ -78,7 +78,7 @@ _print_tokens:
     je .done
     mov rax, r15
     mov rsi, r8
-    call _vec_value_at
+    call _vec_get_value_at
     call _print_token
     inc r8
     jmp .loop
@@ -163,8 +163,8 @@ _start:
     push r14
     push r15
 
-    ; allocate the heap memory
-    call _init_heap
+    call _init_heap     ; allocate heap memory (required for memory.asm)
+    call _gc_init       ; initialize garbage collector (required for object.asm)
 
     call _read
     call _tokenize

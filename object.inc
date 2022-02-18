@@ -1,3 +1,4 @@
+extern _gc_init
 extern _make_pair_obj
 extern _make_integer_obj
 extern _make_symbol_obj

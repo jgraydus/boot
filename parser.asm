@@ -53,7 +53,7 @@ _parse_next:
     ; get the next token
     mov rax, [rbx+0]
     mov rsi, [rbx+8]
-    call _vec_value_at
+    call _vec_get_value_at
     mov rcx, rax        ; token
     ; increment index
     mov rsi, [rbx+8] 
@@ -101,7 +101,7 @@ _parse_next:
     ; check next token for right paren
     mov rax, [rbx+0]
     mov rsi, [rbx+8]
-    call _vec_value_at
+    call _vec_get_value_at
     call _token_type
     cmp rax, TOKEN_RIGHT_PAREN
     je .list_done
