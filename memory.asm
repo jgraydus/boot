@@ -10,6 +10,7 @@ section .bss
     heap:      resq 1
     next:      resq 1
     remaining: resq 1
+    free_list: resq 1
     print_buffer: resb 256
 
 section .data
@@ -73,9 +74,40 @@ _init_heap:
 ;   rax - pointer to allocated memory
 global _malloc
 _malloc:
+    push rbx
+    push r8
+    push r9
+    push r10
+    push r11
+    mov r8, rax
+    ; first check free list for a chunk of sufficient size
+    mov r9, [free_list]
+    mov r10, 0           ; previous chunk in list
+.next:
+    cmp r9, 0
+    je .new_allocation   ; no chunk in free list large enough
+    mov r11, [r9+8]      ; get size of this chunk
+    cmp r11, r8       ; is it large enough?
+    jge .reuse        ; strategy: use first chunk that is large enough. simple but wastes memory
+    mov r10, r9
+    mov r9, [r9+0]    ; go to next chunk in free list
+    jmp .next
+.reuse
+    mov r11, [r9+0]   ; get pointer to chunk after this one
+    cmp r10, 0        ; if the previous chunk is null, then we're replacing the head of the free list
+    je .new_head    
+    mov [r10+0], r11  ; otherwise, change the previous chunk to point at the one after this one 
+    jmp .finish_reuse
+.new_head:
+    mov [free_list], r11
+.finish_reuse:
+    lea rax, [r9+16]  ; return the address of the usable memory of the chunk
+    jmp .done
+.new_allocation:
+    ; allocate 2 additional qwords to hold free list pointer and size
+    add rax, 16
     cmp rax, [remaining]
     jg .handle_oom
-    push rbx
     mov rbx, [remaining]
     sub rbx, rax
     mov [remaining], rbx
@@ -83,9 +115,16 @@ _malloc:
     add rbx, rax
     mov rax, [next]
     mov [next], rbx
+    mov qword [rax], 0   ; first qword is for use in free list (pointer to next cell)
+    mov [rax+8], r8      ; second qword is the amount of memory in this chunk
+    add rax, 16          ; actual usable memory starts after first two qwords
+.done:
+    pop r11
+    pop r10
+    pop r9
+    pop r8
     pop rbx
     ret
-
 .handle_oom:
     mov rsi, oom
     mov rdx, [omm_len]
@@ -96,10 +135,17 @@ _malloc:
     syscall
 
 
-
+; input:
+;   rax - pointer that was previously returned by a call to _malloc
 global _free
 _free:
-    ; TODO
+    push r8
+    ; push the chunk of memory to the front of the free list
+    mov r8, [free_list]     ; pointer to head of current free list
+    sub rax, 16             ; free list pointer is 2 qwords before the pointer that _malloc hands out
+    mov [rax], r8           ; point this chunk at the head of current free list
+    mov [free_list], rax    ; this chunk is now the new head of free list
+    pop r8
     ret
 
 
