@@ -18,48 +18,10 @@ section .rodata
 
 section .text
 
-
 ; read input from stdin and save
 _read:
     call _read_string
     mov [input], rax
-    ret
-
-; input:
-;   rax - address of input string
-; output:
-;   rax - addres of vec of tokens
-_tokenize:
-    push r8                    ; lexer
-    push r9                    ; vec
-    push r10                   ; token
-    push rsi
-    ; create the lexer
-    call _new_lexer
-    mov r8, rax
-    ; create a vec to store the tokens 
-    mov rax, 4
-    call _new_vec
-    mov r9, rax
-    ; tokenize
-.next_tok:
-    mov rax, r8
-    call _next_token
-    mov r10, rax
-    ; push token into vec
-    mov rsi, rax
-    mov rax, r9
-    call _vec_append
-    ; if not EOF, continue
-    mov rax, r10
-    call _token_type
-    cmp rax, TOKEN_EOF
-    jne .next_tok
-    mov rax, r9    ; return the vec
-    pop rsi
-    pop r10
-    pop r9
-    pop r8
     ret
 
 ; input:

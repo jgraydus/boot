@@ -1,6 +1,7 @@
 %include "constants.inc"
 %include "memory.inc"
 %include "string.inc"
+%include "vec.inc"
 
 section .text
 
@@ -9,9 +10,10 @@ section .text
 ; struct {
 ;     ptr,       ; address of input string
 ;     qword,     ; index of next character to read
+;     ptr,       ; address of vec of tokens
 ; }
 
-SIZEOF_LEXER          equ 16
+%define SIZEOF_LEXER    16
 
 ; input:
 ;   rax - address of input string object
@@ -19,13 +21,18 @@ SIZEOF_LEXER          equ 16
 ;   rax - address of lexer object
 global _new_lexer
 _new_lexer:
-    push rsi
-    mov rsi, rax
+    push r8
+    mov r8, rax
     mov rax, SIZEOF_LEXER
     call _malloc
-    mov [rax+0], rsi
-    mov qword [rax+8], 0
-    pop rsi
+    mov rbx, rax
+    mov rax, 32
+    call _new_vec
+    mov [rbx+0], r8
+    mov qword [rbx+8], 0
+    mov [rbx+16], rax
+    mov rax, rbx
+    pop r8
     ret
 
 ; token object
@@ -37,7 +44,7 @@ _new_lexer:
 ;     ptr or qword,   ; other stuff (depends on token) 
 ; }
 
-SIZEOF_TOKEN              equ 32
+%define SIZEOF_TOKEN     32
 
 ; input:
 ;   rax - address of token
@@ -394,14 +401,40 @@ _print_token:
     ret
 
 
-
-
-
-
-
-
-
-
+; input:
+;   rax - address of input string
+; output:
+;   rax - addres of vec of tokens
+global _tokenize
+_tokenize:
+    push r8                    ; lexer
+    push r9                    ; vec
+    push r10                   ; token
+    push rsi
+    ; create the lexer
+    call _new_lexer
+    mov r8, rax
+    mov r9, [rax+16]           ; vec to store tokens
+    ; tokenize
+.next_tok:
+    mov rax, r8
+    call _next_token
+    mov r10, rax
+    ; push token into vec
+    mov rsi, rax
+    mov rax, r9
+    call _vec_append
+    ; if not EOF, continue
+    mov rax, r10
+    call _token_type
+    cmp rax, TOKEN_EOF
+    jne .next_tok
+    mov rax, r9    ; return the vec
+    pop rsi
+    pop r10
+    pop r9
+    pop r8
+    ret
 
 
 
