@@ -1,5 +1,6 @@
 %include "constants.inc"
 %include "memory.inc"
+%include "object.inc"
 %include "print.inc"
 
 ; struct {
@@ -30,6 +31,7 @@ _new_string:
     mov qword [rax+8], NEW_STRING_BUFFER_SIZE       ; buffer length
     mov qword [rax+16], 0       ; content length
     mov qword [rax+24], rcx     ; pointer to buffer
+    call _gc_register_obj
     pop rcx
     ret
 

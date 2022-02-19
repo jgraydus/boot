@@ -21,6 +21,7 @@ _gc_init:
 ;   rax - address of object
 ; output:
 ;   rax - address of object (unchanged)
+global _gc_register_obj
 _gc_register_obj:
     push rax
     push rsi
