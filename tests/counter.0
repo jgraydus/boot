@@ -1,0 +1,16 @@
+(define make-counter 
+    (fn (start)
+       (fn () 
+        (set! start (+ 1 start)) 
+        start
+       )
+    )
+)
+
+(define c (make-counter 0))
+
+(c)
+(c)
+(c)
+
+

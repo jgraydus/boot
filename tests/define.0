@@ -1,0 +1,3 @@
+(define foo "hello, world!")
+(define foo "and now for something completely different")
+

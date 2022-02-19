@@ -1,0 +1,10 @@
+(define map 
+   (fn (f xs) 
+      (if (nil? xs) 
+          () 
+          (cons
+             (f (head xs))
+             (map f (tail xs))))))
+
+(map (fn (x) (+ 1 x)) (list 1 2 3 4 5))
+

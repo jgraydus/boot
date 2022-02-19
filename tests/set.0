@@ -1,0 +1,5 @@
+(define foo 5)
+(set! foo 24)
+(define foo "hello")
+(set! foo 42)
+
