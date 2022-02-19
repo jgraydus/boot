@@ -321,7 +321,7 @@ _apply:
 ; input:
 ;   rax - address of procedure body
 ;   rsi - address of env
-_eval_proc;
+_eval_proc:
     ; a procedure body is a list. evaluation must be done left to right.
     ; the last object in the list to be evaluated is the result of the procedure
     push r8

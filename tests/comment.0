@@ -1,0 +1,20 @@
+; this is a comment
+
+() ; another comment
+
+(define foo ; comment
+  42)
+
+foo
+
+(define x
+  ; comment here
+  (fn (x) ; and comment here
+     x ; and comment here
+  )
+)
+
+(x 42)
+
+; comment at end of file
+;

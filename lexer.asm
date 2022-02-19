@@ -19,7 +19,6 @@ section .text
 ;   rax - address of input string object
 ; output:
 ;   rax - address of lexer object
-global _new_lexer
 _new_lexer:
     push r8
     mov r8, rax
@@ -120,6 +119,24 @@ _next_token:
     mov cl, 127
     cmp al, cl
     jge .start
+    ; skip comments
+    mov cl, 59       ; semicolon
+    cmp al, cl
+    jne .left_paren
+.skip_to_newline:
+    ; if character is newline, then start tokenizing again
+    mov cl, 10       ; newline
+    cmp al, cl
+    je .start
+    ; otherwise read next character 
+    mov r15, [r12+8]
+    mov rsi, [r12+0]
+    mov rdi, r15
+    call _string_char_at
+    ; increment position
+    inc rdi
+    mov [r12+8], rdi
+    jmp .skip_to_newline
 .left_paren:
     mov cl, 40
     cmp al, cl
