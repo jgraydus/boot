@@ -119,7 +119,6 @@ _eval:
     mov rax, r8
     call _get_pair_tail
     call _get_pair_tail
-    call _get_pair_head
     mov r11, rax
     ; build proc object
     mov rax, r10                ; formal param list
@@ -173,13 +172,17 @@ _eval:
     jmp .done
 ; end of special forms
 .apply_proc:
+    ; get the procedure object to apply
     mov rax, r8
     call _get_pair_head
     call _eval
+    ; TODO should check that it's a procedure
     mov r10, rax
+    ; get and evaluate the params
     mov rax, r8
     call _get_pair_tail
     call _eval_params
+    ; now apply the procedure to the params
     mov rdx, rax
     mov rax, r10
     call _apply
@@ -282,19 +285,23 @@ _apply:
     push rcx
     push rsi
     mov r8, rax
+    ; intrinsics are built-in procedures
     call _proc_is_intrinsic
     cmp rax, 1
-    je .intrinsic 
+    je .intrinsic
+    ; set up a new environment which extends the environment where the procedure
+    ; was defined with bindings of the formal params to the provided arguments
     mov rax, r8
     call _get_proc_formal_params
     mov rcx, rax
     mov rax, r8
     call _get_proc_env
     call _extend_env
+    ; now evaluate the body of the procedure in the new environment
     mov rsi, rax
     mov rax, r8
     call _get_proc_body
-    call _eval
+    call _eval_proc
 .done:
     pop rsi
     pop rcx
@@ -311,9 +318,32 @@ _apply:
 
 
 
-
-
-
+; input:
+;   rax - address of procedure body
+;   rsi - address of env
+_eval_proc;
+    ; a procedure body is a list. evaluation must be done left to right.
+    ; the last object in the list to be evaluated is the result of the procedure
+    push r8
+    push r9
+    mov r8, rax
+    mov r9, 0
+.next:
+    cmp rax, 0
+    je .done
+    mov rax, r8
+    call _get_pair_head
+    call _eval
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_tail
+    mov r8, rax
+    jmp .next
+.done:
+    mov rax, r9
+    pop r9
+    pop r8
+    ret
 
 
 
