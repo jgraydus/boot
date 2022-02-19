@@ -321,11 +321,16 @@ _apply:
 ; input:
 ;   rax - address of procedure body
 ;   rsi - address of env
+; output:
+;   rax - the result of the evaluation of the last item in the procedure body
+global _eval_proc
 _eval_proc:
     ; a procedure body is a list. evaluation must be done left to right.
     ; the last object in the list to be evaluated is the result of the procedure
     push r8
     push r9
+    push r10
+    mov r10, rsi
     mov r8, rax
     mov r9, 0
 .next:
@@ -333,6 +338,7 @@ _eval_proc:
     je .done
     mov rax, r8
     call _get_pair_head
+    mov rsi, r10
     call _eval
     mov r9, rax
     mov rax, r8
@@ -341,9 +347,11 @@ _eval_proc:
     jmp .next
 .done:
     mov rax, r9
+    pop r10
     pop r9
     pop r8
     ret
+
 
 
 

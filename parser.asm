@@ -21,7 +21,6 @@ section .text
 ;   rax - address of a vec of tokens
 ; output:
 ;   rax - address of parser
-global _new_parser
 _new_parser:
     push rbx
     mov rbx, rax
@@ -41,7 +40,6 @@ section .text
 ;   rax - address of parser
 ; output:
 ;   rax - address of next parsed object (or -1 if done parsing)
-global _parse_next
 _parse_next:
     push rsi
     push rbx
@@ -62,20 +60,17 @@ _parse_next:
     ; 
     mov rax, rcx
     call _token_type
-
 .eof:
     cmp rax, TOKEN_EOF
     jne .string
     mov rax, -1
     jmp .done
-
 .string:
     cmp rax, TOKEN_STRING
     jne .integer
     mov rax, rcx
     call _token_value
     jmp .done
-
 .integer:
     cmp rax, TOKEN_INTEGER
     jne .symbol
@@ -83,7 +78,6 @@ _parse_next:
     call _token_value
     call _make_integer_obj
     jmp .done
-
 .symbol:
     cmp rax, TOKEN_SYMBOL
     jne .list
@@ -91,7 +85,6 @@ _parse_next:
     call _token_value
     call _make_symbol_obj
     jmp .done
-
 .list:
     cmp rax, TOKEN_LEFT_PAREN
     jne .error
@@ -142,10 +135,8 @@ _parse_next:
     mov rax, SYS_EXIT
     mov rdi, 1
     syscall
-
 .error:
     ; TODO
-
 .done:
     pop r15
     pop r14
@@ -155,8 +146,49 @@ _parse_next:
     ret
 
 
-
-
+; input:
+;   rax - address of a vec of tokens
+; output:
+;   rax - address of a list object
+global _parse
+_parse:
+    push rcx
+    push r8
+    push r9
+    push r10
+    push r11
+    call _new_parser
+    mov r8, rax
+    mov r9, 0
+    mov r10, 0
+.next:
+    mov rax, r8
+    call _parse_next
+    cmp rax, -1
+    je .done
+    mov rcx, 0
+    call _make_pair_obj
+    mov r11, rax
+    mov rax, r9
+    cmp rax, 0
+    jne .append
+    mov r9, r11
+    mov r10, r11
+    jmp .next
+.append:
+    mov rax, r10
+    mov rcx, r11
+    call _set_pair_tail
+    mov r10, r11
+    jmp .next
+.done:
+   mov rax, r9
+   pop r11
+   pop r10
+   pop r9
+   pop r8
+   pop rcx
+   ret
 
 
 

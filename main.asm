@@ -66,6 +66,12 @@ _start:
     call _init_heap     ; allocate heap memory (required for memory.asm)
     call _gc_init       ; initialize garbage collector (required for object.asm)
 
+    call _make_environment
+    mov r13, rax
+    ;call _object_to_string
+    ;call _print_string
+;jmp .exit
+
     call _read
     call _tokenize
     mov r15, rax
@@ -74,37 +80,11 @@ _start:
     ;call _print_newline
 ;jmp .exit
 
-    call _make_environment
-    mov r13, rax
-    ;call _object_to_string
-    ;call _print_string
-;jmp .exit
-
-.parse:
-    mov rax, r15
-    call _new_parser
-    mov r12, rax
-.parse_next:
-    mov rax, r12
-    call _parse_next
-    cmp rax, -1
-    je .parse_done
-    mov rsi, r13   ; environment
-    call _eval
+    call _parse
+    mov rsi, r13
+    call _eval_proc
     call _object_to_string
-    ; add a space
-    mov rsi, space_character
-    mov rcx, 1
-    call _append_from_buffer
     call _print_string
-    call _print_newline
-    ;mov rax, r13
-    ;call _object_to_string
-    ;call _print_string
-    ;call _print_newline
-    jmp .parse_next
-.parse_done:
-
 
 .exit:
     call _print_memory_stats
