@@ -15,8 +15,6 @@ section .bss
 
 section .rodata
     space_character: db " "
-    newline: db 10
-    foobar: db "foobar"
 
 section .text
 
@@ -89,71 +87,10 @@ _print_tokens:
     pop r8
     ret
 
-_print_newline:
-    call _new_string
-    mov rsi, newline
-    mov rcx, 1
-    call _append_from_buffer
-    call _print_string
-    ret
-
-section .rodata
-    x: db "x"
-    y: db "y"
-    z: db "z"
-section .text
-
 _make_environment:
-    push r8        
-    push r9
-    push r10
     mov rax, 0
     call _make_env
-    mov r8, rax
-    ; bind x to 1
-    call _new_string
-    mov rsi, x
-    mov rcx, 1
-    call _append_from_buffer
-    call _make_symbol_obj
-    mov r9, rax
-    mov rax, 1
-    call _make_integer_obj
-    mov rdi, rax
-    mov rsi, r9
-    mov rax, r8
-    call _env_add_binding
-    ; bind y to 2
-    call _new_string
-    mov rsi, y
-    mov rcx, 1
-    call _append_from_buffer
-    call _make_symbol_obj
-    mov r9, rax
-    mov rax, 2
-    call _make_integer_obj
-    mov rdi, rax
-    mov rsi, r9
-    mov rax, r8
-    call _env_add_binding
-    ; bind z to 3
-    call _new_string
-    mov rsi, z
-    mov rcx, 1
-    call _append_from_buffer
-    call _make_symbol_obj
-    mov r9, rax
-    mov rax, 3
-    call _make_integer_obj
-    mov rdi, rax
-    mov rsi, r9
-    mov rax, r8
-    call _env_add_binding
-    ; done
-    mov rax, r8
-    pop r10
-    pop r9
-    pop r8
+    call _add_intrinsics_to_env
     ret
 
 global _start
@@ -170,14 +107,13 @@ _start:
     call _read
     call _tokenize
     mov r15, rax
-    call _print_tokens
-    call _print_newline
-    call _print_newline
+    ;call _print_tokens
+    ;call _print_newline
+    ;call _print_newline
 ;jmp .exit
 
     call _make_environment
     mov r13, rax
-    call _add_intrinsics_to_env
     ;call _object_to_string
     ;call _print_string
 ;jmp .exit
@@ -200,10 +136,10 @@ _start:
     call _append_from_buffer
     call _print_string
     call _print_newline
-    mov rax, r13
-    call _object_to_string
-    call _print_string
-    call _print_newline
+    ;mov rax, r13
+    ;call _object_to_string
+    ;call _print_string
+    ;call _print_newline
     jmp .parse_next
 .parse_done:
 

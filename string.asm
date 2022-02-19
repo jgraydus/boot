@@ -404,8 +404,19 @@ _string_equals_buffer:
     pop r10
     ret
 
+section .rodata
+    newline: db 10
+section .text
 
-
+global _print_newline
+_print_newline:
+    call _new_string
+    mov rsi, newline
+    mov rcx, 1
+    call _append_from_buffer
+    call _print_string
+    ret
+    
 
 
 

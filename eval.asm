@@ -1,6 +1,7 @@
 %include "constants.inc"
 %include "env.inc"
 %include "object.inc"
+%include "string.inc"
 
 section .text
 
@@ -220,7 +221,7 @@ _eval_params:
     mov rcx, rax
     mov rax, r9
     call _make_pair_obj 
-.done
+.done:
     pop r9
     pop r8
     ret
@@ -260,6 +261,7 @@ _extend_env:
     mov rax, r10
     call _get_pair_tail
     mov r10, rax    
+    jmp .next
 .done:
     mov rax, r8
     pop r10
@@ -276,6 +278,9 @@ _extend_env:
 ;   rax - result of procedure application
 _apply:
     push r8
+    push r9
+    push rcx
+    push rsi
     mov r8, rax
     call _proc_is_intrinsic
     cmp rax, 1
@@ -291,6 +296,9 @@ _apply:
     call _get_proc_body
     call _eval
 .done:
+    pop rsi
+    pop rcx
+    pop r9
     pop r8 
     ret
 .intrinsic:

@@ -43,6 +43,43 @@ _intrinsic_sub:
     pop r8
     ret
 
+_intrinsic_cons:
+    push r8
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_head
+    mov rcx, rax
+    mov rax, r8
+    call _get_pair_head
+    call _make_pair_obj
+    pop r8
+    ret
+
+_intrinsic_list:
+    ; just return the arg list
+    ret
+
+_intrinsic_head:
+    call _get_pair_head       ; first (only) arg
+    call _get_pair_head
+    ret
+
+_intrinsic_tail:
+    call _get_pair_head       ; first (only) arg
+    call _get_pair_tail
+    ret
+
+_intrinsic_is_nil:
+    call _get_pair_head
+    cmp rax, 0
+    je .yes
+    call _symbol_false
+    jmp .done
+.yes:
+    call _symbol_true
+.done:
+    ret
+
 %macro make_symbol 1
 section .rodata
     %%str: db %1
@@ -75,8 +112,13 @@ _add_intrinsics_to_env:
     push r8
     push r9
     mov r8, rax
-    add_binding "%add", _intrinsic_add
-    add_binding "%sub", _intrinsic_sub
+    add_binding "+", _intrinsic_add
+    add_binding "-", _intrinsic_sub
+    add_binding "cons", _intrinsic_cons
+    add_binding "list", _intrinsic_list
+    add_binding "head", _intrinsic_head
+    add_binding "tail", _intrinsic_tail
+    add_binding "nil?", _intrinsic_is_nil
     pop r9
     pop r8
     ret

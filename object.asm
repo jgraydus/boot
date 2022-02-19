@@ -255,7 +255,7 @@ _symbol_false:
     push rsi
     push rcx
     call _new_string
-    mov rsi, true_txt
+    mov rsi, false_txt
     mov rcx, 2
     call _append_from_buffer
     call _make_symbol_obj
