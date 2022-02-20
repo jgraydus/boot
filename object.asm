@@ -425,7 +425,8 @@ _object_to_string:
     cmp rax, TYPE_PAIR_OBJ
     jne .error
     ; if tail is not nil or a list, print as a dotted pair
-    mov rax, [rbx+16]
+    mov rax, rbx
+    call _get_pair_tail
     cmp rax, 0
     je .list
     mov rax, [rax+0]
@@ -477,8 +478,9 @@ _object_to_string:
     mov rax, rbx
     call _get_pair_tail
     ; if the tail is nil, then done
-    cmp r9, 0
+    cmp rax, 0
     je .list_done
+    mov rbx, rax
     ; append a space character
     mov rax, r8
     mov rsi, space
