@@ -8,6 +8,7 @@
 %include "parser.inc"
 %include "print.inc"
 %include "string.inc"
+%include "sys_calls.inc"
 %include "vec.inc"
 
 section .bss
@@ -94,8 +95,7 @@ _start:
     pop r14
     pop r13
     pop r12
-    mov rax, SYS_EXIT
     mov rdi, EXIT_SUCCESS
-    syscall
+    call _sys_exit
 
 

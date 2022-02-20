@@ -4,6 +4,7 @@
 %include "object.inc"
 %include "stack.inc"
 %include "string.inc"
+%include "sys_calls.inc"
 %include "vec.inc"
 
 section .text
@@ -132,9 +133,8 @@ _parse_next:
     mov rcx, 15
     call _append_from_buffer
     call _print_string
-    mov rax, SYS_EXIT
     mov rdi, 1
-    syscall
+    call _sys_exit 
 .error:
     ; TODO
 .done:

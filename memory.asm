@@ -1,5 +1,6 @@
 %include "constants.inc"
 %include "print.inc"
+%include "sys_calls.inc"
 
 HEAP_SIZE         equ 1024*1024
 
@@ -55,14 +56,13 @@ _print_memory_stats:
 
 global _init_heap
 _init_heap:
-    mov rax, SYS_MMAP
     mov rdi, 0
     mov rsi, HEAP_SIZE
     mov rdx, PROT_WRITE 
     mov r10, MAP_PRIVATE | MAP_ANONYMOUS
     mov r8, -1                                ; file descriptor (-1 for MAP_ANONYMOUS)
     mov r9, 0                                 ; offset (must be 0 for MAP_ANONYMOUS)
-    syscall
+    call _sys_mmap
     mov [heap], rax
     mov [next], rax
     mov qword [remaining], HEAP_SIZE
@@ -130,9 +130,8 @@ _malloc:
     mov rdx, [omm_len]
     call _flush_print_buffer
     ; exit
-    mov rax, SYS_EXIT
     mov rdi, 1
-    syscall
+    call _sys_exit
 
 
 ; input:

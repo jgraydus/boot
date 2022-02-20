@@ -2,6 +2,7 @@
 %include "memory.inc"
 %include "object.inc"
 %include "print.inc"
+%include "sys_calls.inc"
 
 ; struct {
 ;     qword,      ; string object type tag
@@ -108,13 +109,9 @@ _print_string:
     push rax
     push rsi
     push rdx
-    push rdi
     mov rsi, [rax+buffer_offset]
     mov rdx, [rax+content_length_offset]
-    mov rax, SYS_WRITE
-    mov rdi, STDOUT_FILENO
-    syscall
-    pop rdi
+    call _sys_write
     pop rdx
     pop rsi
     pop rax
@@ -144,12 +141,9 @@ _read_string:
     call _double_buffer_size
     jmp .prep_and_read 
 .read:
-    mov rax, SYS_READ
-    mov rdi, STDIN_FILENO
     mov rsi, [rbx+buffer_offset]
     add rsi, [rbx+content_length_offset]
-    mov rdx, READ_SIZE
-    syscall
+    call _sys_read
     cmp rax, 0            ; done when 0 bytes are read
     je .done
     add [rbx+content_length_offset], rax      ; increase size of content by bytes read

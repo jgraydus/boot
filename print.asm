@@ -1,4 +1,5 @@
 %include "constants.inc"
+%include "sys_calls.inc"
 
 
 section .text
@@ -142,8 +143,6 @@ _print_signed_int:
 ;   rax - number of bytes written
 global _flush_print_buffer
 _flush_print_buffer:
-    mov rax, SYS_WRITE
-    mov rdi, STDOUT_FILENO
-    syscall
+    call _sys_write
     ret
   
