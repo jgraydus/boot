@@ -10,9 +10,12 @@
 ;     ptr         ; buffer address
 ; }
 
-%define SIZEOF_STRING_OBJ       32
+%define SIZEOF_STRING_OBJ       40
 %define NEW_STRING_BUFFER_SIZE  16
 
+%define buffer_size_offset    16
+%define content_length_offset 24
+%define buffer_offset         32
 
 ; output:
 ;   rax - address of an empty string with a 16 byte buffer
@@ -28,9 +31,10 @@ _new_string:
     call _malloc
     ; initialize string
     mov qword [rax+0], TYPE_STRING_OBJ
-    mov qword [rax+8], NEW_STRING_BUFFER_SIZE       ; buffer length
-    mov qword [rax+16], 0       ; content length
-    mov qword [rax+24], rcx     ; pointer to buffer
+    mov qword [rax+8], 0   ; flags
+    mov qword [rax+buffer_size_offset], NEW_STRING_BUFFER_SIZE       ; buffer length  
+    mov qword [rax+content_length_offset], 0       ; content length
+    mov qword [rax+buffer_offset], rcx     ; pointer to buffer
     call _gc_register_obj
     pop rcx
     ret
@@ -49,18 +53,18 @@ _double_buffer_size:
     push rax
     mov rbx, rax    ; need rax to call _malloc
     ; remember the current buffer address
-    mov rsi, [rbx+24]
+    mov rsi, [rbx+buffer_offset]
     mov r8, rsi
     ; double the buffer size
-    mov rcx, [rbx+8]
+    mov rcx, [rbx+buffer_size_offset]
     shl rcx, 1
-    mov [rbx+8], rcx
+    mov [rbx+buffer_size_offset], rcx
     ; allocate a new buffer
     mov rax, rcx
     call _malloc
-    mov [rbx+24], rax
+    mov [rbx+buffer_offset], rax
     ; copy old buffer to new buffer
-    mov rdx, [rbx+16]   ; number of bytes to copy
+    mov rdx, [rbx+content_length_offset]   ; number of bytes to copy
 .loop:
     cmp rdx, 0
     je .done 
@@ -90,8 +94,8 @@ _print_string:
     push rsi
     push rdx
     push rdi
-    mov rsi, [rax+24]
-    mov rdx, [rax+16]
+    mov rsi, [rax+buffer_offset]
+    mov rdx, [rax+content_length_offset]
     mov rax, SYS_WRITE
     mov rdi, STDOUT_FILENO
     syscall
@@ -117,8 +121,8 @@ _read_string:
     mov rbx, rax
 .prep_and_read:
     ; make sure there's enough remaining room in the string's buffer
-    mov r8, [rbx+8]
-    sub r8, [rbx+16]  ; (buffer size) - (content size)
+    mov r8, [rbx+buffer_size_offset]
+    sub r8, [rbx+content_length_offset]  ; (buffer size) - (content size)
     cmp r8, READ_SIZE 
     jge .read
     mov rax, rbx
@@ -127,13 +131,13 @@ _read_string:
 .read:
     mov rax, SYS_READ
     mov rdi, STDIN_FILENO
-    mov rsi, [rbx+24]
-    add rsi, [rbx+16]
+    mov rsi, [rbx+buffer_offset]
+    add rsi, [rbx+content_length_offset]
     mov rdx, READ_SIZE
     syscall
     cmp rax, 0            ; done when 0 bytes are read
     je .done
-    add [rbx+16], rax      ; increase size of content by bytes read
+    add [rbx+content_length_offset], rax      ; increase size of content by bytes read
     jmp .prep_and_read
 .done:
     mov rax, rbx
@@ -158,16 +162,16 @@ _append_from_buffer:
     push rdi
     push rbx
 .ensure_buffer_length:
-    mov r8, [rax+8]      ; destination  buffer size
-    sub r8, [rax+16]     ; subtract content size
+    mov r8, [rax+buffer_size_offset]      ; destination  buffer size
+    sub r8, [rax+content_length_offset]     ; subtract content size
     cmp r8, rcx
     jg .copy
     call _double_buffer_size
     jmp .ensure_buffer_length
 .copy:
-    mov rdi, [rax+24]     ; set destination address
-    add rdi, [rax+16]     ; skip past existing content
-    add [rax+16], rcx     ; increase content length
+    mov rdi, [rax+buffer_offset]     ; set destination address
+    add rdi, [rax+content_length_offset]     ; skip past existing content
+    add [rax+content_length_offset], rcx     ; increase content length
 .loop:
     cmp rcx, 0
     je .done
@@ -192,9 +196,9 @@ global _string_append
 _string_append:
    push rcx
    push rdx
-   mov rcx, [rsi+16]  ; # of bytes to append
+   mov rcx, [rsi+content_length_offset]  ; # of bytes to append
    mov rdx, rsi
-   mov rsi, [rdx+24]  ; source string's buffer
+   mov rsi, [rdx+buffer_offset]  ; source string's buffer
    call _append_from_buffer
    pop rdx
    pop rcx
@@ -206,7 +210,7 @@ _string_append:
 ;   rax - length of the string content
 global _string_length
 _string_length:
-    mov rax, [rsi+16] 
+    mov rax, [rsi+content_length_offset] 
     ret
 
 
@@ -219,7 +223,7 @@ _string_length:
 global _string_char_at
 _string_char_at:
     push r8
-    mov r8, [rsi+24]    ; buffer address
+    mov r8, [rsi+buffer_offset]    ; buffer address
     add r8, rdi
     mov rax, 0
     mov al, [r8]
@@ -239,7 +243,7 @@ _substring:
     push rcx
     mov rbx, rax
     call _new_string
-    mov rsi, [rbx+24]
+    mov rsi, [rbx+buffer_offset]
     add rsi, r8   ; start
     mov rcx, r9
     sub rcx, r8   ; length
@@ -330,13 +334,13 @@ _string_equals:
     cmp rax, rcx
     je .done
     ; if lengths are different, they can't be equal 
-    mov rax, [r8+16]
-    cmp rax, [r9+16]
+    mov rax, [r8+content_length_offset]
+    cmp rax, [r9+content_length_offset]
     jne .not_equal 
     ; ok, i suppose we need to compare character by character
-    mov rbx, [r8+16]   ; length 
-    mov r8, [r8+24]    ; buffers
-    mov r9, [r9+24]
+    mov rbx, [r8+content_length_offset]   ; length 
+    mov r8, [r8+buffer_offset]    ; buffers
+    mov r9, [r9+buffer_offset]
 .next_char:
     cmp rbx, 0
     je .done           ; no characters left to compare. they must be equal
@@ -399,8 +403,8 @@ global _string_equals_buffer
 _string_equals_buffer:
     push r10
     push r11
-    mov r10, [rax+24]   ; address of string's buffer
-    mov r11, [rax+16]   ; buffer length
+    mov r10, [rax+buffer_offset]   ; address of string's buffer
+    mov r11, [rax+content_length_offset]   ; buffer length
     call _char_buffer_equals
     pop r11
     pop r10

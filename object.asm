@@ -36,9 +36,9 @@ _gc_register_obj:
 ;
 ; struct {
 ;      qword,      ; type
+;      qword,      ; flags
 ;      ptr,        ; address of head object
 ;      ptr,        ; address of tail object
-;      qword,      ; flags
 ; }
 
 %define SIZEOF_PAIR_OBJ      32
@@ -54,11 +54,12 @@ _make_pair_obj:
     push rax
     mov rax, SIZEOF_PAIR_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_PAIR_OBJ
+    mov qword [rax+0], TYPE_PAIR_OBJ   ; type
+    mov qword [rax+8], 0               ; flags
     pop rcx
-    mov [rax+8], rcx
+    mov [rax+16], rcx                  ; head
     pop rcx
-    mov [rax+16], rcx
+    mov [rax+24], rcx                  ; tail
     call _gc_register_obj
     ret
 
@@ -68,7 +69,7 @@ _make_pair_obj:
 ;   rax - address of head of the pair
 global _get_pair_head
 _get_pair_head:
-    mov rax, [rax+8]
+    mov rax, [rax+16]
     ret
 
 ; input:
@@ -78,7 +79,7 @@ _get_pair_head:
 ;   rax - address of pair (unchanged)
 global _set_pair_head
 _set_pair_head:
-    mov [rax+8], rcx
+    mov [rax+16], rcx
     ret
 
 ; input:
@@ -87,7 +88,7 @@ _set_pair_head:
 ;   rax - address of tail of the pair
 global _get_pair_tail
 _get_pair_tail:
-    mov rax, [rax+16]
+    mov rax, [rax+24]
     ret
 
 ; input:
@@ -97,15 +98,15 @@ _get_pair_tail:
 ;   rax - address of pair (unchanged)
 global _set_pair_tail
 _set_pair_tail:
-    mov [rax+16], rcx
+    mov [rax+24], rcx
     ret
 
 ; integer object 
 ;
 ; struct {
 ;     qword,        ; type
-;     qword,        ; integer value
 ;     qword,        ; flags
+;     qword,        ; integer value
 ; }
 
 %define SIZEOF_INTEGER_OBJ   24
@@ -121,7 +122,8 @@ _make_integer_obj:
     mov rax, SIZEOF_INTEGER_OBJ
     call _malloc
     mov qword [rax+0], TYPE_INTEGER_OBJ
-    mov [rax+8], rcx
+    mov qword [rax+8], 0
+    mov [rax+16], rcx
     call _gc_register_obj
     pop rcx
     ret
@@ -132,7 +134,7 @@ _make_integer_obj:
 ;   rax - integer value
 global _integer_get_value
 _integer_get_value:
-    mov rax, [rax+8]
+    mov rax, [rax+16]
     ret
 
 
@@ -140,8 +142,8 @@ _integer_get_value:
 ;
 ; struct {
 ;     qword,         ; type
-;     ptr,           ; address of string
 ;     qword,         ; flags
+;     ptr,           ; address of string
 ; }
 
 %define SIZEOF_SYMBOL_OBJ    24
@@ -157,11 +159,15 @@ _make_symbol_obj:
    mov rax, SIZEOF_SYMBOL_OBJ
    call _malloc
    mov qword [rax+0], TYPE_SYMBOL_OBJ
-   mov [rax+8], rcx
+   mov qword [rax+8], 0
+   mov [rax+16], rcx
    call _gc_register_obj
    pop rcx
    ret
 
+_symbol_get_string:
+    mov rax, [rax+16]
+    ret
 
 section .data
      define_txt: db "define"
@@ -178,7 +184,7 @@ section .data
     mov r8, [rax+0]
     cmp r8, TYPE_SYMBOL_OBJ
     jne .not
-    mov rax, [rax+8]
+    mov rax, [rax+16]
     mov r8, %1    ; buffer
     mov r9, %2    ; length
     call _string_equals_buffer
@@ -268,10 +274,10 @@ _symbol_false:
 ;
 ; struct {
 ;     qword,            ; type
+;     qword,            ; flags
 ;     ptr,              ; address of formal parameters (list of symbols)
 ;     ptr,              ; address of environment
 ;     ptr,              ; address of body of function
-;     qword,            ; flags
 ; }
 
 %define SIZEOF_PROCEDURE_OBJ   40
@@ -288,32 +294,31 @@ _make_procedure_obj:
     mov rax, SIZEOF_PROCEDURE_OBJ
     call _malloc
     mov qword [rax+0], TYPE_PROCEDURE_OBJ
-    pop rcx
-    mov [rax+8], rcx
+    mov qword [rax+8], 0
     pop rcx
     mov [rax+16], rcx
     pop rcx
     mov [rax+24], rcx
-    mov qword [rax+32], 0
+    pop rcx
+    mov [rax+32], rcx
     call _gc_register_obj
     ret
 
 global _get_proc_formal_params
 _get_proc_formal_params:
-    mov rax, [rax+8]
+    mov rax, [rax+16]
     ret
 
 global _get_proc_env
 _get_proc_env:
-    mov rax, [rax+16]
+    mov rax, [rax+24]
     ret
 
 global _get_proc_body
 _get_proc_body:
-    mov rax, [rax+24]
+    mov rax, [rax+32]
     ret
 
-%define INTRINSIC_PROC_FLAG 2
 
 ; input:
 ;   rax - pointer to native code
@@ -326,17 +331,17 @@ _make_intrinsic_obj:
     mov rax, SIZEOF_PROCEDURE_OBJ
     call _malloc
     mov qword [rax+0], TYPE_PROCEDURE_OBJ
-    mov qword [rax+8], 0
+    mov qword [rax+8], INTRINSIC_PROC_FLAG
     mov qword [rax+16], 0
-    mov [rax+24], r8
-    mov qword [rax+32], INTRINSIC_PROC_FLAG
+    mov qword [rax+24], 0
+    mov [rax+32], r8
     call _gc_register_obj
     pop r8
     ret
 
 global _proc_is_intrinsic
 _proc_is_intrinsic:
-    mov rax, [rax+32]
+    mov rax, [rax+8]
     and rax, INTRINSIC_PROC_FLAG
     cmp rax, INTRINSIC_PROC_FLAG
     je .yes
@@ -385,7 +390,8 @@ _object_to_string:
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
     jne .string
-    mov rax, [rbx+8]
+    mov rax, rbx
+    call _symbol_get_string
     jmp .done
 .string:
     cmp rax, TYPE_STRING_OBJ
@@ -403,7 +409,8 @@ _object_to_string:
 .integer:
     cmp rax, TYPE_INTEGER_OBJ
     jne .procedure
-    mov rax, [rbx+8]
+    mov rax, rbx
+    call _integer_get_value
     call _string_from_integer
     jmp .done
 .procedure:
@@ -425,11 +432,13 @@ _object_to_string:
     cmp rax, TYPE_PAIR_OBJ
     je .list
     ; head to string
-    mov rax, [rbx+8]
+    mov rax, rbx
+    call _get_pair_head
     call _object_to_string
     mov r10, rax
     ; tail to string
-    mov rax, [rbx+16]
+    mov rax, rbx
+    call _get_pair_tail
     call _object_to_string
     mov r11, rax
     ; build the string
@@ -459,12 +468,14 @@ _object_to_string:
     mov r8, rax   ; hold the string
     mov r9, rbx   ; hold next list node
 .list_next:
-    mov rax, [r9+8]  ; object in list
+    mov rax, rbx
+    call _get_pair_head   ; object in list
     call _object_to_string
     mov rsi, rax
     mov rax, r8 
     call _string_append
-    mov r9, [r9+16]  ; tail of the list
+    mov rax, rbx
+    call _get_pair_tail
     ; if the tail is nil, then done
     cmp r9, 0
     je .list_done
@@ -524,14 +535,20 @@ _obj_equals:
     cmp rax, TYPE_PAIR_OBJ
     jne .string
     ; first compare the head of head pair
-    mov rax, [r8+8]
-    mov rcx, [r9+8]
+    mov rax, r9
+    call _get_pair_head
+    mov rcx, rax
+    mov rax, r8
+    call _get_pair_head
     call _obj_equals
     cmp rax, 0
     je .not_equal
     ; then compare the tail of each pair
-    mov rax, [r8+16]
-    mov rcx, [r8+16]
+    mov rax, r9
+    call _get_pair_tail
+    mov rcx, rax
+    mov rax, r8
+    call _get_pair_tail
     call _obj_equals
     jmp .done
 .string: 
@@ -544,15 +561,22 @@ _obj_equals:
 .integer:
     cmp rax, TYPE_INTEGER_OBJ
     jne .symbol
-    mov rax, [r8+8]      ; compare the integer values
-    cmp rax, [r9+8]
+    mov rax, r9
+    call _integer_get_value
+    mov rcx, rax
+    mov rax, r8
+    call _integer_get_value
+    cmp rax, rcx
     je .equal
     jmp .not_equal
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
     jne .function
-    mov rax, [r8+8]      ; compare the string values
-    mov rcx, [r9+8]
+    mov rax, r9
+    call _symbol_get_string
+    mov rcx, rax
+    mov rax, r8
+    call _symbol_get_string
     call _obj_equals
     jmp .done
 .function:
@@ -581,6 +605,34 @@ global _obj_type
 _obj_type:
     mov rax, [rax+0]
     ret
+
+
+
+
+
+_gc_mark:
+    push r8
+    push r9
+
+    mov rax, [gc_registry]
+    call _vec_length
+    mov r8, rax
+
+.next:
+    cmp r8, 0
+    je .done
+
+    mov rax, [gc_registry]
+    mov rsi, r8
+    call _vec_get_value_at
+
+    
+   
+.done:
+    pop r9
+    pop r8
+    ret
+
 
 
 

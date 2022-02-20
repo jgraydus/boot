@@ -33,4 +33,6 @@ TYPE_INTEGER_OBJ    equ 3
 TYPE_SYMBOL_OBJ     equ 4
 TYPE_PROCEDURE_OBJ  equ 5
 
-
+; object flags
+%define GC_MARK_FLAG            1
+%define INTRINSIC_PROC_FLAG     2
