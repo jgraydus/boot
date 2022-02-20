@@ -1,5 +1,7 @@
 extern _gc_init
 extern _gc_register_obj
+extern _gc_mark
+extern _gc_unmark
 extern _make_pair_obj
 extern _make_integer_obj
 extern _integer_get_value

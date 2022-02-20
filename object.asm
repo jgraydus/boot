@@ -607,33 +607,97 @@ _obj_type:
     ret
 
 
-
-
-
+; set the gc mark flag on all objects
+global _gc_mark
 _gc_mark:
     push r8
     push r9
-
     mov rax, [gc_registry]
     call _vec_length
     mov r8, rax
-
 .next:
+    dec r8
     cmp r8, 0
     je .done
-
+    ; get object
     mov rax, [gc_registry]
     mov rsi, r8
     call _vec_get_value_at
-
-    
-   
+    ; set mark flag
+    mov r9, [rax+8]
+    or r9, GC_MARK_FLAG
+    mov [rax+8], r9
+    ; go to next object
+    jmp .next
 .done:
     pop r9
     pop r8
     ret
 
-
+; input:
+;   rax - root object
+global _gc_unmark
+_gc_unmark:
+    push r8
+    mov r8, rax
+    ; nothing to do for nil
+    cmp r8, 0
+    je .done
+    ; stop if already unmarked
+    mov rax, [r8+8]
+    and rax, GC_MARK_FLAG
+    cmp rax, 0
+    jne .done
+    ; unset mark flag
+    mov rax, [r8+8]
+    xor rax, GC_MARK_FLAG
+    mov [r8+8], rax
+    ; follow references inside objects
+    ; get object type
+    mov rax, [r8+0]
+.pair:
+    cmp rax, TYPE_PAIR_OBJ
+    jne .string
+    mov rax, r8
+    call _get_pair_head
+    call _gc_unmark
+    mov rax, r8
+    call _get_pair_tail
+    call _gc_unmark
+    jmp .done
+.string:
+    cmp rax, TYPE_PAIR_OBJ
+    jne .string
+    ; no op
+    jmp .done
+.integer:
+    cmp rax, TYPE_INTEGER_OBJ
+    jne .string
+    ; no op
+    jmp .done
+.symbol:
+    cmp rax, TYPE_SYMBOL_OBJ
+    jne .string
+    mov rax, r8
+    call _symbol_get_string
+    call _gc_unmark
+    jmp .done
+.procedure:
+    cmp rax, TYPE_PROCEDURE_OBJ
+    jne .string
+    mov rax, r8
+    call _get_proc_formal_params
+    call _gc_unmark
+    mov rax, r8
+    call _get_proc_body
+    call _gc_unmark
+    mov rax, r8
+    call _get_proc_env
+    call _gc_unmark
+    jmp .done
+.done:
+    pop r8
+    ret
 
 
 
