@@ -1,0 +1,9 @@
+(define take
+  (fn (n xs)
+    (if (nil? xs) ()
+    (if (= 0 n)   ()
+        (cons (head xs) (take (- n 1) (tail xs)))))))
+
+(take 2 (list 1 2 3 4 5))
+
+(take 10 (list 1 2 3))

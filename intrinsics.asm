@@ -43,6 +43,28 @@ _intrinsic_sub:
     pop r8
     ret
 
+_intrinsic_equals:
+    push r8
+    push r9
+    mov r8, rax
+    call _get_pair_head
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov rcx, r9
+    call _obj_equals
+    cmp rax, 1
+    je .yes
+    call _symbol_false
+    jmp .done
+.yes:
+    call _symbol_true
+.done:
+    pop r9
+    pop r8
+    ret
+
 _intrinsic_cons:
     push r8
     mov r8, rax
@@ -119,6 +141,7 @@ _add_intrinsics_to_env:
     add_binding "head", _intrinsic_head
     add_binding "tail", _intrinsic_tail
     add_binding "nil?", _intrinsic_is_nil
+    add_binding "=", _intrinsic_equals
     pop r9
     pop r8
     ret
