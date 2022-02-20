@@ -35,4 +35,5 @@ TYPE_PROCEDURE_OBJ  equ 5
 
 ; object flags
 %define GC_MARK_FLAG            1
-%define INTRINSIC_PROC_FLAG     2
+%define GC_ELIGIBLE_FLAG        2
+%define INTRINSIC_PROC_FLAG     8

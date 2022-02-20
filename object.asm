@@ -648,10 +648,11 @@ _gc_unmark:
     and rax, GC_MARK_FLAG
     cmp rax, 0
     jne .done
-    ; unset mark flag
+    ; unset mark flag, set eligible flag
     mov rax, GC_MARK_FLAG
     not rax
     and rax, [r8+8]
+    or rax, GC_ELIGIBLE_FLAG
     mov [r8+8], rax
     ; follow references inside objects
     ; get object type
@@ -705,7 +706,7 @@ _gc_unmark:
     pop r8
     ret
 
-; free all objects which have the gc mark flag set
+; free all eligible objects which have the gc mark flag set
 _gc_reclaim:
     push rsi
     push r8
@@ -725,6 +726,11 @@ _gc_reclaim:
     mov rsi, r9
     call _vec_get_value_at
     mov r10, rax
+    ; if the gc eligible flag is not set, skip
+    mov rax, [r10+8]
+    and rax, GC_ELIGIBLE_FLAG
+    cmp rax, 0
+    je .done
     ; if the gc mark flag is set, free the object
     mov rax, [r10+8]
     and rax, GC_MARK_FLAG
