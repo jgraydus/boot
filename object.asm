@@ -608,7 +608,6 @@ _obj_type:
 
 
 ; set the gc mark flag on all objects
-global _gc_mark
 _gc_mark:
     push r8
     push r9
@@ -636,7 +635,6 @@ _gc_mark:
 
 ; input:
 ;   rax - root object
-global _gc_unmark
 _gc_unmark:
     push r8
     mov r8, rax
@@ -649,8 +647,9 @@ _gc_unmark:
     cmp rax, 0
     jne .done
     ; unset mark flag
-    mov rax, [r8+8]
-    xor rax, GC_MARK_FLAG
+    mov rax, GC_MARK_FLAG
+    not rax
+    and rax, [r8+8]
     mov [r8+8], rax
     ; follow references inside objects
     ; get object type
@@ -685,6 +684,11 @@ _gc_unmark:
 .procedure:
     cmp rax, TYPE_PROCEDURE_OBJ
     jne .string
+    ; don't do anything for intrinsics
+    mov rax, r8
+    call _proc_is_intrinsic
+    cmp rax, 1
+    je .done
     mov rax, r8
     call _get_proc_formal_params
     call _gc_unmark
@@ -699,8 +703,70 @@ _gc_unmark:
     pop r8
     ret
 
+; free all objects which have the gc mark flag set
+_gc_reclaim:
+    push rsi
+    push r8
+    push r9
+    push r10
+    mov r8, [gc_registry]
+    ; get the index of the last object
+    mov rax, r8
+    call _vec_length
+    mov r9, rax
+.next:
+    cmp r9, 0
+    je .done
+    dec r9
+    ; get the next object
+    mov rax, r8
+    mov rsi, r9
+    call _vec_get_value_at
+    mov r10, rax
+    ; if the gc mark flag is set, free the object
+    mov rax, [r10+8]
+    and rax, GC_MARK_FLAG
+    cmp rax, 0
+    je .next
+    mov rax, r10
+    mov rax, r8
+    mov rsi, r9
+    call _vec_remove
+    call _gc_free_obj
+.done:
+    pop r10
+    pop r9
+    pop r8
+    pop rsi
+    ret
 
+_gc_free_obj:
+    push r8
+    mov r8, rax
+    call _obj_type
+    ; strings are special because they have to free their buffer
+    cmp rax, TYPE_STRING_OBJ
+    jne .other
+    mov rax, r8
+    call _string_free
+.other:
+    ; nothing extra to do for other object types 
+    mov rax, r8
+    call _free
+    pop r8
+    ret
 
-
+; input:
+;   rax - address of root object. all live objects should be reachable from this object
+global _gc_run
+_gc_run:
+    push r8
+    mov r8, rax
+    call _gc_mark
+    mov rax, r8
+    call _gc_unmark
+    call _gc_reclaim
+    pop r8
+    ret
 
 

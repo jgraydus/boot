@@ -1,4 +1,5 @@
 extern _new_string
+extern _string_free
 extern _print_string
 extern _read_string
 extern _append_from_buffer

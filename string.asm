@@ -39,6 +39,21 @@ _new_string:
     pop rcx
     ret
 
+; input:
+;   rax - address of string
+global _string_free
+_string_free:
+    push r8
+    mov r8, rax
+    ; free the buffer
+    mov rax, [r8+buffer_offset]
+    call _free
+    ; free the string
+    mov rax, r8
+    call _free
+    pop r8 
+    ret
+
 ; double the buffer size of the given string and copy the existing
 ; contents to the new buffer
 ;

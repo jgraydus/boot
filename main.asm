@@ -85,8 +85,8 @@ _start:
     call _eval_proc
     call _object_to_string
     call _print_string
-    call _gc_mark
-    call _gc_unmark
+    mov rax, r13
+    call _gc_run
 
 .exit:
     call _print_memory_stats

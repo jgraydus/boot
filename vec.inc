@@ -3,4 +3,5 @@ extern _vec_append
 extern _vec_get_value_at
 extern _vec_set_value_at
 extern _vec_length
+extern _vec_remove
 
