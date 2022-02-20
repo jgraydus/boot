@@ -143,6 +143,9 @@ _print_signed_int:
 ;   rax - number of bytes written
 global _flush_print_buffer
 _flush_print_buffer:
+    push rdi
+    mov rdi, STDOUT_FILENO
     call _sys_write
+    pop rdi
     ret
   

@@ -3,25 +3,21 @@
 ; input:
 ;   rsi - address of buffer
 ;   rdx - maximum # of bytes to read
+;   rdi - file handle
 global _sys_read
 _sys_read:
-    push rdi
     mov rax, SYS_READ
-    mov rdi, STDIN_FILENO
     syscall
-    pop rdi
     ret
 
 ; input:
 ;   rsi - address of buffer
 ;   rdx - number of bytes to write
+;   rdi - file handle
 global _sys_write
 _sys_write:
-    push rdi
     mov rax, SYS_WRITE
-    mov rdi, STDOUT_FILENO
     syscall
-    pop rdi
     ret
 
 ; input:

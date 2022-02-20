@@ -111,6 +111,7 @@ _print_string:
     push rdx
     mov rsi, [rax+buffer_offset]
     mov rdx, [rax+content_length_offset]
+    mov rdi, STDOUT_FILENO
     call _sys_write
     pop rdx
     pop rsi
@@ -143,6 +144,7 @@ _read_string:
 .read:
     mov rsi, [rbx+buffer_offset]
     add rsi, [rbx+content_length_offset]
+    mov rdi, STDIN_FILENO
     call _sys_read
     cmp rax, 0            ; done when 0 bytes are read
     je .done
