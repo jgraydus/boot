@@ -43,6 +43,67 @@ _intrinsic_sub:
     pop r8
     ret
 
+_intrinsic_mult:
+    push r8
+    push r9
+    push rdx
+    mov rdx, 0
+    mov r8, rax
+    call _get_pair_head
+    call _integer_get_value
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    imul r9
+    call _make_integer_obj
+    pop rdx
+    pop r9
+    pop r8
+    ret
+
+_intrinsic_div:
+    push r8
+    push r9
+    push rdx
+    mov rdx, 0
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_head
+    call _integer_get_value
+    idiv r9
+    call _make_integer_obj
+    pop rdx
+    pop r9
+    pop r8
+    ret
+
+_intrinsic_mod:
+    push r8
+    push r9
+    push rdx
+    mov rdx, 0
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_head
+    call _integer_get_value
+    idiv r9
+    mov rax, rdx
+    call _make_integer_obj
+    pop rdx
+    pop r9
+    pop r8
+    ret
+
 _intrinsic_equals:
     push r8
     push r9
@@ -142,6 +203,9 @@ _add_intrinsics_to_env:
     add_binding "tail", _intrinsic_tail
     add_binding "nil?", _intrinsic_is_nil
     add_binding "=", _intrinsic_equals
+    add_binding "*", _intrinsic_mult
+    add_binding "/", _intrinsic_div
+    add_binding "mod", _intrinsic_mod
     pop r9
     pop r8
     ret
