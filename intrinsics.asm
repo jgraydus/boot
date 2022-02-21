@@ -2,6 +2,7 @@
 %include "env.inc"
 %include "object.inc"
 %include "string.inc"
+%include "sys_calls.inc"
 
 section .text
 
@@ -163,6 +164,27 @@ _intrinsic_is_nil:
 .done:
     ret
 
+_intrinsic_exit:
+    push rdi
+    mov rdi, 0
+    cmp rax, 0
+    je .no_arg
+    call _get_pair_head
+    call _integer_get_value
+.no_arg:
+    mov rdi, rax
+    call _sys_exit
+    pop rdi
+    ret
+
+_intrinsic_print:
+    call _get_pair_head
+    call _object_to_string
+    call _print_string
+    call _print_newline
+    mov rax, 0
+    ret
+
 %macro make_symbol 1
 section .rodata
     %%str: db %1
@@ -206,6 +228,8 @@ _add_intrinsics_to_env:
     add_binding "*", _intrinsic_mult
     add_binding "/", _intrinsic_div
     add_binding "mod", _intrinsic_mod
+    add_binding "exit", _intrinsic_exit
+    add_binding "print", _intrinsic_print
     pop r9
     pop r8
     ret
