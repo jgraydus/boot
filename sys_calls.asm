@@ -40,3 +40,12 @@ _sys_exit:
     mov rax, SYS_EXIT
     syscall
     ret
+
+; input:
+;   rdi - address of file path (null terminated string)
+;   rsi - flags
+global _sys_open
+_sys_open:
+    mov rax, SYS_OPEN
+    syscall
+    ret

@@ -13,16 +13,31 @@
 
 section .bss
     input: resq 1
+    argc: resq 1
+    args: resq 1
+    buffer: resb 1024
 
 section .rodata
+    prelude: db "./prelude.0", 0
     space_character: db " "
 
 section .text
 
 ; read input from stdin and save
 _read:
+    push r8
+    mov rax, STDIN_FILENO
+    mov r8, [argc]
+    cmp r8, 2
+    jne .stdin
+    mov rdi, [args]    ; pointer to the array of args
+    mov rdi, [rdi+8]   ; file should be second arg 
+    mov rsi, 0
+    call _sys_open
+.stdin:
     call _read_string
     mov [input], rax
+    pop r8
     ret
 
 ; input:
@@ -58,6 +73,13 @@ _make_environment:
 
 global _start
 _start:
+    ; get argc
+    pop rax
+    mov [argc], rax
+    ; top of stack now points at array of arguments (char**)
+    mov [args], rsp
+
+
     ; these registers should be preserved
     push r12
     push r13
@@ -69,17 +91,10 @@ _start:
 
     call _make_environment
     mov r13, rax
-    ;call _object_to_string
-    ;call _print_string
-;jmp .exit
 
     call _read
     call _tokenize
     mov r15, rax
-    ;call _print_tokens
-    ;call _print_newline
-    ;call _print_newline
-;jmp .exit
 
     call _parse
     mov rsi, r13

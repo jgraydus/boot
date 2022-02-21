@@ -120,15 +120,19 @@ _print_string:
 
 READ_SIZE         equ 1024
 
+; input:
+;   rax - file handle
 ; output:
 ;   rax - address of string read from stdin
 global _read_string
 _read_string:
     push r8
+    push r9
     push rsi
     push rdi
     push rdx
     push rbx
+    mov r9, rax
     ; create a string
     call _new_string
     mov rbx, rax
@@ -144,7 +148,7 @@ _read_string:
 .read:
     mov rsi, [rbx+buffer_offset]
     add rsi, [rbx+content_length_offset]
-    mov rdi, STDIN_FILENO
+    mov rdi, r9
     call _sys_read
     cmp rax, 0            ; done when 0 bytes are read
     je .done
@@ -156,6 +160,7 @@ _read_string:
     pop rdx
     pop rdi
     pop rsi
+    pop r9
     pop r8
     ret
 
