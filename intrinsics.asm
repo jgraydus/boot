@@ -1,6 +1,10 @@
 %include "constants.inc"
 %include "env.inc"
+%include "eval.inc"
+%include "lexer.inc"
+%include "memory.inc"
 %include "object.inc"
+%include "parser.inc"
 %include "string.inc"
 %include "sys_calls.inc"
 
@@ -185,6 +189,48 @@ _intrinsic_print:
     mov rax, 0
     ret
 
+_intrinsic_read:
+    push rdi
+    push rsi
+    push r8
+    push r9
+    push r10
+    ; open file
+    call _get_pair_head
+    call _string_to_null_terminated
+    mov r8, rax ; remember this string so we can free it
+    mov rdi, rax
+    mov rsi, 0
+    call _sys_open
+    mov r9, rax
+    ; read file
+    call _read_string
+    mov r10, rax
+    ; clean up
+    mov rax, r8         ; free the file name
+    call _free
+    mov rdi, r9         ; close the file
+    call _sys_close
+.done:
+    mov rax, r10
+    pop r10
+    pop r9
+    pop r8
+    pop rsi
+    pop rdi
+    ret
+
+_intrinsic_parse:
+    call _get_pair_head
+    call _tokenize
+    call _parse
+    ret
+
+_intrinsic_eval:
+    call _get_pair_head
+    call _eval_proc
+    ret
+
 %macro make_symbol 1
 section .rodata
     %%str: db %1
@@ -230,6 +276,9 @@ _add_intrinsics_to_env:
     add_binding "mod", _intrinsic_mod
     add_binding "exit", _intrinsic_exit
     add_binding "print", _intrinsic_print
+    add_binding "read", _intrinsic_read
+    add_binding "parse", _intrinsic_parse
+    add_binding "eval", _intrinsic_eval
     pop r9
     pop r8
     ret

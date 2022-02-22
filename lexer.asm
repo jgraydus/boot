@@ -13,7 +13,7 @@ section .text
 ;     ptr,       ; address of vec of tokens
 ; }
 
-%define SIZEOF_LEXER    16
+%define SIZEOF_LEXER    24
 
 ; input:
 ;   rax - address of input string object
@@ -88,7 +88,7 @@ _next_token:
     ; remember the lexer object
     mov r12, rax
     ; get the length of the input
-    mov rsi, [r12+0]
+    mov rax, [r12+0]
     call _string_length
     mov r13, rax
 .start:

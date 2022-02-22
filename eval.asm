@@ -185,6 +185,7 @@ _eval:
     ; now apply the procedure to the params
     mov rdx, rax
     mov rax, r10
+    mov rsi, r9
     call _apply
     jmp .done
 .other:
@@ -277,6 +278,7 @@ _extend_env:
 ; input:
 ;   rax - address of procedure object
 ;   rdx - address of argument list
+;   rsi - address of calling environment
 ; output:
 ;   rax - result of procedure application
 _apply:

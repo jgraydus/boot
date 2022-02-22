@@ -6,6 +6,7 @@
 
 ; struct {
 ;     qword,      ; string object type tag
+;     qword,      ; flags
 ;     qword,      ; buffer_length
 ;     qword,      ; content_length
 ;     ptr         ; buffer address
@@ -123,7 +124,7 @@ READ_SIZE         equ 1024
 ; input:
 ;   rax - file handle
 ; output:
-;   rax - address of string read from stdin
+;   rax - address of string read from file handle
 global _read_string
 _read_string:
     push r8
@@ -149,6 +150,7 @@ _read_string:
     mov rsi, [rbx+buffer_offset]
     add rsi, [rbx+content_length_offset]
     mov rdi, r9
+    mov rdx, READ_SIZE
     call _sys_read
     cmp rax, 0            ; done when 0 bytes are read
     je .done
@@ -221,12 +223,56 @@ _string_append:
    ret 
 
 ; input:
-;   rsi - address of string
+;   rax - address of string
 ; output:
 ;   rax - length of the string content
 global _string_length
 _string_length:
-    mov rax, [rsi+content_length_offset] 
+    mov rax, [rax+content_length_offset] 
+    ret
+
+; input:
+;   rax - address of string object
+; output:
+;   rax - address of a copy of the string as a null terminated buffer
+global _string_to_null_terminated
+_string_to_null_terminated:
+    push rcx
+    push rdx
+    push r8
+    push r9
+    push r10
+    push r11
+    mov r8, rax
+    call _string_length
+    mov r9, rax
+    inc rax          ; add 1 for the 0 at the end
+    add rax, 8       ; ensure it's a multiple of 8 for _malloc
+    mov r10, 3
+    not r10
+    and rax, r10
+    call _malloc                    ; destination buffer in rax
+    mov r11, rax
+    mov r10, [r8+buffer_offset]     ; source buffer
+    mov rdx, 0                      ; counter
+.next:
+    cmp rdx, r9
+    je .done
+    mov cl, [r10]
+    mov [rax], cl
+    inc rax
+    inc r10
+    inc rdx
+    jmp .next
+.done:
+    mov byte [rax], 0     ; write the terminator
+    mov rax, r11
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rdx
+    pop rcx
     ret
 
 

@@ -11,4 +11,5 @@ extern _string_from_integer
 extern _string_equals
 extern _string_equals_buffer
 extern _print_newline
+extern _string_to_null_terminated
 
