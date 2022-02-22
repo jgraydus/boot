@@ -12,6 +12,9 @@ section .text
 
 ; all intrinsics take arguments as a list in rax and return their result in rax
 
+_intrinsic_env:
+    mov rax, rsi
+    ret
 
 _intrinsic_add:
     push r8
@@ -131,6 +134,28 @@ _intrinsic_equals:
     pop r8
     ret
 
+_intrinsic_greater_than:
+    push r8
+    push r9
+    mov r8, rax
+    call _get_pair_head
+    call _integer_get_value
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    cmp r9, rax
+    jg .yes
+    call _symbol_false
+    jmp .done
+.yes:
+    call _symbol_true
+.done:
+    pop r9
+    pop r8
+    ret
+
 _intrinsic_cons:
     push r8
     mov r8, rax
@@ -166,6 +191,49 @@ _intrinsic_is_nil:
 .yes:
     call _symbol_true
 .done:
+    ret
+
+_intrinsic_bool:
+    call _get_pair_head
+    call _to_bool
+    ret
+
+_to_bool:
+    cmp rax, 0
+    je .false
+    call _symbol_is_false
+    cmp rax, 1
+    je .false
+    call _symbol_true
+    jmp .done
+.false:
+    call _symbol_false
+.done:
+    ret
+
+_intrinsic_and:
+    push rcx
+    push r8
+    mov r8, rax
+    call _get_pair_head
+    call _to_bool
+    call _symbol_is_true
+    cmp rax, 0
+    je .false
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    call _to_bool
+    call _symbol_is_true
+    cmp rax, 0
+    je .false
+    call _symbol_true
+    jmp .done
+.false:
+    call _symbol_false
+.done:
+    pop r8
+    pop rcx
     ret
 
 _intrinsic_exit:
@@ -263,6 +331,7 @@ _add_intrinsics_to_env:
     push r8
     push r9
     mov r8, rax
+    add_binding "env", _intrinsic_env
     add_binding "+", _intrinsic_add
     add_binding "-", _intrinsic_sub
     add_binding "cons", _intrinsic_cons
@@ -270,7 +339,10 @@ _add_intrinsics_to_env:
     add_binding "head", _intrinsic_head
     add_binding "tail", _intrinsic_tail
     add_binding "nil?", _intrinsic_is_nil
+    add_binding "bool", _intrinsic_bool
+    add_binding "and", _intrinsic_and
     add_binding "=", _intrinsic_equals
+    add_binding ">", _intrinsic_greater_than
     add_binding "*", _intrinsic_mult
     add_binding "/", _intrinsic_div
     add_binding "mod", _intrinsic_mod

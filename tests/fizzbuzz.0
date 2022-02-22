@@ -1,0 +1,24 @@
+(define map 
+   (fn (f xs)
+      (if (nil? xs) ()
+          (cons (f (head xs)) (map f (tail xs))))))
+
+(define range 
+  (fn (from to)
+     (if (> from to) () (cons from (range (+ 1 from) to)))))
+
+(define divides (fn (a b) (= 0 (mod b a))))
+
+(define fizzbuzz
+  (fn (n)
+     (define by3 (divides 3 n))
+     (define by5 (divides 5 n))
+     (if (and by3 by5) "fizzbuzz"
+         (if by3 "fizz" 
+            (if by5 "buzz" n)
+         )
+     )
+))
+
+(map fizzbuzz (range 1 30))
+
