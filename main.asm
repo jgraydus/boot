@@ -95,7 +95,9 @@ _start:
     call _read
     call _tokenize
     mov r15, rax
+    ;call _print_tokens
 
+    mov rax, r15
     call _parse
     mov rsi, r13
     call _eval_proc
