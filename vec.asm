@@ -9,14 +9,16 @@
 ;    ptr,        ; address of buffer
 ; }
 
+%define vec_buffer_offset      16
+
 %define SIZEOF_VEC 24
 
 ; input:
 ;   rax - initial buffer size (in # of entries)
 ; output:
 ;   rax - address of vec
-global _new_vec
-_new_vec:
+global _vec_new
+_vec_new:
     push r8
     push r9
     ; allocate buffer
@@ -30,7 +32,7 @@ _new_vec:
     call _malloc
     mov [rax+0], r8         ; buffer size
     mov qword [rax+8], 0    ; contents size (empty)
-    mov [rax+16], r9        ; buffer address
+    mov [rax+vec_buffer_offset], r9        ; buffer address
     pop r9
     pop r8
     ret
@@ -52,7 +54,7 @@ _vec_resize_buffer:
     shl rax, 3           ; multiply by 8 (size of qword)
     call _malloc
     ; copy into new buffer
-    mov r8, [rbx+16]     ; old buffer address
+    mov r8, [rbx+vec_buffer_offset]     ; old buffer address
     mov r9, rax          ; new buffer address
     mov r10, [rbx+8]     ; number of items to copy
     push r9
@@ -70,7 +72,7 @@ _vec_resize_buffer:
     pop rax        ; free the old buffer memory
     call _free
     pop rax        ; update the vec to point at new buffer
-    mov [rbx+16], rax
+    mov [rbx+vec_buffer_offset], rax
     mov rax, rbx
     pop rbx
     pop r10
@@ -95,7 +97,7 @@ _vec_append:
 .append:
     mov r8, [rax+8]    ; current size
     shl r8, 3          ; multiply by 8 (size of each entry)
-    add r8, [rax+16]   ; add address of buffer
+    add r8, [rax+vec_buffer_offset]   ; add address of buffer
     mov [r8], rsi      ; copy to buffer
     mov r8, [rax+8]    ; increment content size
     inc r8
@@ -146,7 +148,7 @@ _vec_remove:
 global _vec_get_value_at
 _vec_get_value_at:
     shl rsi, 3         ; multiply by 8
-    add rsi, [rax+16]  ; add start of buffer
+    add rsi, [rax+vec_buffer_offset]  ; add start of buffer
     mov rax, [rsi] 
     ret
 
@@ -159,7 +161,7 @@ _vec_get_value_at:
 global _vec_set_value_at
 _vec_set_value_at:
     shl rsi, 3         ; multiply by 8
-    add rsi, [rax+16]  ; add start of buffer
+    add rsi, [rax+vec_buffer_offset]  ; add start of buffer
     mov [rsi], rdi
     ret
 
@@ -175,7 +177,18 @@ _vec_length:
     pop rbx
     ret
 
-
+; input:
+;   rax - address of vec
+global _vec_free
+_vec_free:
+    push r8
+    mov r8, rax
+    mov rax, [rax+vec_buffer_offset]
+    call _free
+    mov rax, r8
+    call _free
+    pop r8 
+    ret
 
      
 

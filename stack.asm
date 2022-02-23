@@ -8,20 +8,23 @@
 ;    qword,    ; size
 ; }
 
-%define SIZEOF_STACK 16
+%define stack_vec_offset      0
+%define stack_size_offset     8
+%define SIZEOF_STACK          16
+%define STACK_VEC_SIZE        16
 
 ; output:
 ;   rax - address of stack
 global _new_stack
 _new_stack:
     push rbx
-    mov rax, 16
-    call _new_vec
+    mov rax, STACK_VEC_SIZE
+    call _vec_new
     mov rbx, rax
     mov rax, SIZEOF_STACK
     call _malloc
     mov [rax], rbx   ; vec
-    mov qword [rax+8], 0   ; size
+    mov qword [rax+stack_size_offset], 0   ; size
     pop rbx
     ret
 
@@ -31,7 +34,7 @@ _new_stack:
 ;   rax - number of items in the stack
 global _stack_size
 _stack_size:
-    mov rax, [rax+8]
+    mov rax, [rax+stack_size_offset]
     ret
 
 ; input:
@@ -43,11 +46,11 @@ global _stack_push
 _stack_push:
     push rbx
     mov rbx, rax
-    mov rax, [rbx+0]    ; vec
+    mov rax, [rbx+stack_vec_offset]    ; vec
     call _vec_append
-    mov rax, [rbx+8]    ; increment the size
+    mov rax, [rbx+stack_size_offset]    ; increment the size
     inc rax
-    mov [rbx+8], rax
+    mov [rbx+stack_size_offset], rax
     mov rax, rbx
     pop rbx
     ret
@@ -60,16 +63,34 @@ global _stack_pop
 _stack_pop:
     push rbx
     mov rbx, rax
-    mov rax, [rbx+8]
+    mov rax, [rbx+stack_size_offset]
     cmp rax, 0
     je .done
     dec rax            ; decrement count
-    mov [rbx+8], rax
+    mov [rbx+stack_size_offset], rax
     mov rsi, rax       ; index of last item
-    mov rax, [rbx+0]   ; vec
+    mov rax, [rbx+stack_vec_offset]   ; vec
     call _vec_get_value_at
 .done:
     pop rbx
     ret
+
+; input:
+;   rax - address of stack
+global _stack_free
+_stack_free:
+    push r8
+    mov r8, rax
+    mov rax, [r8+stack_vec_offset]
+    call _vec_free
+    mov rax, r8
+    call _free
+    pop r8     
+    ret
+
+
+
+
+
 
 

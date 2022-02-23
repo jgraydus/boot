@@ -16,6 +16,9 @@ section .text
 ;    qword,    ; index of next token
 ; }
 
+%define token_vec_offset           0
+%define next_token_index_offset    8
+
 %define SIZEOF_PARSER    16
 
 ; input: 
@@ -40,6 +43,30 @@ section .text
 ; input:
 ;   rax - address of parser
 ; output:
+;   rax - address of next token
+_parser_peek_next_token:
+    push r8
+    mov r8, rax
+    ; TODO ensure we don't read past end of vec?
+    mov rax, [r8+token_vec_offset]
+    mov rsi, [r8+next_token_index_offset]
+    call _vec_get_value_at
+    pop r8
+    ret
+
+; input:
+;   rax - addres of parser
+_parser_advance:
+    push r8
+    mov r8, [rax+next_token_index_offset] 
+    inc r8
+    mov [rax+next_token_index_offset], r8
+    pop r8
+    ret 
+
+; input:
+;   rax - address of parser
+; output:
 ;   rax - address of next parsed object (or -1 if done parsing)
 _parse_next:
     push rsi
@@ -48,17 +75,11 @@ _parse_next:
     push r14
     push r15
     mov rbx, rax       ; parser
-    ; TODO ensure we don't read past end of vec?
-    ; get the next token
-    mov rax, [rbx+0]
-    mov rsi, [rbx+8]
-    call _vec_get_value_at
-    mov rcx, rax        ; token
+    call _parser_peek_next_token
+    mov rcx, rax       ; token
+    mov rax, rbx
     ; increment index
-    mov rsi, [rbx+8] 
-    inc rsi
-    mov [rbx+8], rsi
-    ; 
+    call _parser_advance
     mov rax, rcx
     call _token_type
 .eof:
@@ -93,9 +114,8 @@ _parse_next:
     mov r14, rax
 .list_next:
     ; check next token for right paren
-    mov rax, [rbx+0]
-    mov rsi, [rbx+8]
-    call _vec_get_value_at
+    mov rax, rbx
+    call _parser_peek_next_token
     call _token_type
     cmp rax, TOKEN_RIGHT_PAREN
     je .list_done
@@ -109,9 +129,8 @@ _parse_next:
     jmp .list_next
 .list_done:
     ; consume the right paren
-    mov rsi, [rbx+8] 
-    inc rsi
-    mov [rbx+8], rsi
+    mov rax, rbx
+    call _parser_advance
     ; create list
     mov rcx, 0
 .build_list:
@@ -125,6 +144,8 @@ _parse_next:
     mov rcx, rax
     jmp .build_list
 .build_list_done:
+    mov rax, r14
+    call _stack_free
     mov rax, rcx
     jmp .done
 .list_unmatched_paren:

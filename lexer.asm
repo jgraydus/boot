@@ -26,7 +26,7 @@ _new_lexer:
     call _malloc
     mov rbx, rax
     mov rax, 32
-    call _new_vec
+    call _vec_new
     mov [rbx+0], r8
     mov qword [rbx+8], 0
     mov [rbx+16], rax

@@ -12,7 +12,7 @@ global _gc_init
 _gc_init:
     push rax
     mov qword rax, 1024
-    call _new_vec
+    call _vec_new 
     mov [gc_registry], rax
     pop rax
     ret
