@@ -156,6 +156,29 @@ _intrinsic_greater_than:
     pop r8
     ret
 
+_intrinsic_less_than:
+    push r8
+    push r9
+    mov r8, rax
+    call _get_pair_head
+    call _integer_get_value
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    cmp r9, rax
+    jl .yes
+    call _symbol_false
+    jmp .done
+.yes:
+    call _symbol_true
+.done:
+    pop r9
+    pop r8
+    ret
+
+
 _intrinsic_cons:
     push r8
     mov r8, rax
@@ -343,6 +366,7 @@ _add_intrinsics_to_env:
     add_binding "and", _intrinsic_and
     add_binding "=", _intrinsic_equals
     add_binding ">", _intrinsic_greater_than
+    add_binding "<", _intrinsic_less_than
     add_binding "*", _intrinsic_mult
     add_binding "/", _intrinsic_div
     add_binding "mod", _intrinsic_mod
