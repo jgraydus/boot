@@ -414,7 +414,7 @@ _print_token:
     mov rcx, [r12+token_type_offset]     ; type tag
     cmp rcx, TOKEN_EOF
     jne .left_paren
-    call _new_string
+    call _string_new
     mov rsi, eof_token
     mov rcx, 5
     call _append_from_buffer
@@ -424,7 +424,7 @@ _print_token:
     mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_LEFT_PAREN
     jne .right_paren
-    call _new_string
+    call _string_new
     mov rsi, left_paren_token
     mov rcx, 12
     call _append_from_buffer
@@ -434,7 +434,7 @@ _print_token:
     mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_RIGHT_PAREN
     jne .string
-    call _new_string
+    call _string_new
     mov rsi, right_paren_token
     mov rcx, 13
     call _append_from_buffer
@@ -444,7 +444,7 @@ _print_token:
     mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_STRING
     jne .integer
-    call _new_string
+    call _string_new
     ; prefix
     mov rsi, string_token_start
     mov rcx, 9
@@ -462,7 +462,7 @@ _print_token:
     mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_INTEGER
     jne .symbol
-    call _new_string
+    call _string_new
     ; prefix
     mov rsi, integer_token_start
     mov rcx, 9
@@ -484,7 +484,7 @@ _print_token:
     mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_SYMBOL
     jne .error
-    call _new_string
+    call _string_new
     ; prefix
     mov rsi, symbol_token_start
     mov rcx, 8

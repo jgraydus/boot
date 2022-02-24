@@ -149,7 +149,7 @@ _parse_next:
     mov rax, rcx
     jmp .done
 .list_unmatched_paren:
-    call _new_string
+    call _string_new
     mov rsi, unmatched_paren_msg
     mov rcx, 15
     call _append_from_buffer

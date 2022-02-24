@@ -248,7 +248,7 @@ global _symbol_true
 _symbol_true:
     push rsi
     push rcx
-    call _new_string
+    call _string_new
     mov rsi, true_txt
     mov rcx, 2
     call _append_from_buffer
@@ -261,7 +261,7 @@ global _symbol_false
 _symbol_false:
     push rsi
     push rcx
-    call _new_string
+    call _string_new
     mov rsi, false_txt
     mov rcx, 2
     call _append_from_buffer
@@ -379,7 +379,7 @@ _object_to_string:
     ; check for nil
     cmp rax, 0
     jne .go
-    call _new_string
+    call _string_new
     mov rsi, nil_object
     mov rcx, 2
     call _append_from_buffer
@@ -396,7 +396,7 @@ _object_to_string:
 .string:
     cmp rax, TYPE_STRING_OBJ
     jne .integer
-    call _new_string
+    call _string_new
     mov rsi, double_quote
     mov rcx, 1
     call _append_from_buffer
@@ -416,7 +416,7 @@ _object_to_string:
 .procedure:
     cmp rax, TYPE_PROCEDURE_OBJ
     jne .pair
-    call _new_string
+    call _string_new
     mov rsi, function_string
     mov rcx, 11
     call _append_from_buffer
@@ -443,7 +443,7 @@ _object_to_string:
     call _object_to_string
     mov r11, rax
     ; build the string
-    call _new_string
+    call _string_new
     mov rsi, left_paren           ; (
     mov rcx, 1
     call _append_from_buffer
@@ -462,7 +462,7 @@ _object_to_string:
     mov rax, [rbx+0]
     cmp rax, TYPE_PAIR_OBJ
     jne .error
-    call _new_string
+    call _string_new
     mov rsi, left_paren
     mov rcx, 1
     call _append_from_buffer

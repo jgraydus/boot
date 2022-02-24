@@ -304,7 +304,7 @@ section .rodata
     %%str: db %1
     %%len: equ $-%%str
 section .text
-    call _new_string
+    call _string_new
     mov rsi, %%str
     mov rcx, %%len
     call _append_from_buffer

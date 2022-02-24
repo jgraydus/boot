@@ -21,8 +21,8 @@
 
 ; output:
 ;   rax - address of an empty string with a 16 byte buffer
-global _new_string
-_new_string:
+global _string_new
+_string_new:
     push rcx
     ; allocate memory for data
     mov rax, NEW_STRING_BUFFER_SIZE
@@ -135,7 +135,7 @@ _read_string:
     push rbx
     mov r9, rax
     ; create a string
-    call _new_string
+    call _string_new
     mov rbx, rax
 .prep_and_read:
     ; make sure there's enough remaining room in the string's buffer
@@ -304,7 +304,7 @@ _substring:
     push rbx
     push rcx
     mov rbx, rax
-    call _new_string
+    call _string_new
     mov rsi, [rbx+buffer_offset]
     add rsi, r8   ; start
     mov rcx, r9
@@ -338,7 +338,7 @@ _string_from_integer:
     push rdx
     push rbx
     mov rbx, rax
-    call _new_string
+    call _string_new
     ; first check for least integer values as a special case
     mov r8, -9223372036854775808
     cmp rbx, r8
@@ -478,7 +478,7 @@ section .text
 
 global _print_newline
 _print_newline:
-    call _new_string
+    call _string_new
     mov rsi, newline
     mov rcx, 1
     call _append_from_buffer
