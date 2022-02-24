@@ -213,7 +213,9 @@ _eval:
 _eval_params:
     push r8
     push r9
+    push r10
     mov r8, rax
+    mov r10, rsi
     cmp rax, 0
     je .done
     call _get_pair_head
@@ -221,11 +223,13 @@ _eval_params:
     mov r9, rax
     mov rax, r8
     call _get_pair_tail
+    mov rsi, r10
     call _eval_params 
     mov rcx, rax
     mov rax, r9
     call _make_pair_obj 
 .done:
+    pop r10
     pop r9
     pop r8
     ret
