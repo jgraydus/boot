@@ -3,6 +3,17 @@
 %include "string.inc"
 %include "vec.inc"
 
+%define newline_char           10
+%define space_char             32
+%define bang_char              33
+%define double_quote_char      34
+%define left_paren_char        40
+%define right_paren_char       41
+%define semicolon_char         59
+%define tilde_char            126
+%define del_char              127
+%define ascii_digit_offset     48
+
 section .text
 
 ; lexer object
@@ -11,11 +22,13 @@ section .text
 ;     ptr,       ; address of input string
 ;     qword,     ; index of next character to read
 ;     ptr,       ; address of vec of tokens
+;     qword,     ; line number
 ; }
 
 %define input_string_offset           0
 %define next_character_index_offset   8
 %define token_vec_offset              16
+%define line_number_offset            24
 %define SIZEOF_LEXER                  24
 %define LEXER_VEC_SIZE                32
 
@@ -23,7 +36,7 @@ section .text
 ;   rax - address of input string object
 ; output:
 ;   rax - address of lexer object
-_new_lexer:
+_lexer_new:
     push r8
     push r9
     mov r8, rax
@@ -35,6 +48,7 @@ _new_lexer:
     mov       [r9+input_string_offset],          r8
     mov qword [r9+next_character_index_offset],   0
     mov       [r9+token_vec_offset],            rax
+    mov qword [r9+line_number_offset],            1
     mov rax, r9
     pop r9
     pop r8
@@ -143,23 +157,35 @@ _lexer_peek_next_character:
 ; input:
 ;   rax - address of lexer
 _lexer_advance:
+    push rdi
+    push rsi
     push r8
-    mov r8, [rax+next_character_index_offset]
-    inc r8
-    mov [rax+next_character_index_offset], r8
+    push r9
+    mov r8, rax
+    ; increment position
+    mov r9, [r8+next_character_index_offset]
+    inc r9
+    mov [r8+next_character_index_offset], r9
+    ; at end of input?
+    mov rax, [r8+input_string_offset]
+    call _string_length
+    cmp r9, rax
+    je .done
+    ; if next character is newline, increment line count
+    mov rsi, [r8+input_string_offset]
+    mov rdi, [r8+next_character_index_offset]
+    call _string_char_at
+    cmp rax, newline_char
+    jne .done
+    mov r9, [r8+line_number_offset]
+    inc r9
+    mov [r8+line_number_offset], r9
+.done:
+    pop r9
     pop r8
+    pop rsi
+    pop rdi
     ret
-
-%define newline_char           10
-%define space_char             32
-%define bang_char              33
-%define double_quote_char      34
-%define left_paren_char        40
-%define right_paren_char       41
-%define semicolon_char         59
-%define tilde_char            126
-%define del_char              127
-%define ascii_digit_offset     48
 
 ; input:
 ;   rax - address of lexer object
@@ -350,8 +376,6 @@ _next_token:
     jmp .done
 .next:
     ; TODO other tokens
-
-   
     mov rax, 0
 .done:
     pop rcx
@@ -368,15 +392,15 @@ _next_token:
 
 
 section .rodata
-    eof_token: db "[EOF]"
-    left_paren_token: db "[LEFT_PAREN]"
-    right_paren_token: db "[RIGHT_PAREN]"
-    string_token_start: db "[STRING ", 34    ; 34 is " character
-    string_token_end: db 34, "]"
+    eof_token:           db "[EOF]"
+    left_paren_token:    db "[LEFT_PAREN]"
+    right_paren_token:   db "[RIGHT_PAREN]"
+    string_token_start:  db "[STRING ", double_quote_char
+    string_token_end:    db double_quote_char, "]"
     integer_token_start: db "[INTEGER "
-    integer_token_end: db "]"
-    symbol_token_start: db "[SYMBOL "
-    symbol_token_end: db "]"
+    integer_token_end:   db "]"
+    symbol_token_start:  db "[SYMBOL "
+    symbol_token_end:    db "]"
 
 section .text
 
@@ -387,7 +411,7 @@ _print_token:
     push r12
     mov r12, rax
 .eof:
-    mov rcx, [r12+0]     ; type tag
+    mov rcx, [r12+token_type_offset]     ; type tag
     cmp rcx, TOKEN_EOF
     jne .left_paren
     call _new_string
@@ -397,7 +421,7 @@ _print_token:
     call _print_string
     jmp .done
 .left_paren:
-    mov rcx, [r12+0]
+    mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_LEFT_PAREN
     jne .right_paren
     call _new_string
@@ -407,7 +431,7 @@ _print_token:
     call _print_string
     jmp .done
 .right_paren:
-    mov rcx, [r12+0]
+    mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_RIGHT_PAREN
     jne .string
     call _new_string
@@ -417,7 +441,7 @@ _print_token:
     call _print_string
     jmp .done
 .string:
-    mov rcx, [r12+0]
+    mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_STRING
     jne .integer
     call _new_string
@@ -426,7 +450,7 @@ _print_token:
     mov rcx, 9
     call _append_from_buffer
     ; string
-    mov rsi, [r12+24]
+    mov rsi, [r12+token_value_offset]
     call _string_append
     ; suffix
     mov rsi, string_token_end
@@ -435,7 +459,7 @@ _print_token:
     call _print_string
     jmp .done
 .integer:
-    mov rcx, [r12+0]
+    mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_INTEGER
     jne .symbol
     call _new_string
@@ -445,7 +469,7 @@ _print_token:
     call _append_from_buffer
     ; integer value
     push rax
-    mov rax, [r12+24]
+    mov rax, [r12+token_value_offset]
     call _string_from_integer
     mov rsi, rax
     pop rax
@@ -457,7 +481,7 @@ _print_token:
     call _print_string
     jmp .done
 .symbol:
-    mov rcx, [r12+0]
+    mov rcx, [r12+token_type_offset]
     cmp rcx, TOKEN_SYMBOL
     jne .error
     call _new_string
@@ -466,7 +490,7 @@ _print_token:
     mov rcx, 8
     call _append_from_buffer
     ; string
-    mov rsi, [r12+24]
+    mov rsi, [r12+token_value_offset]
     call _string_append
     ; suffix
     mov rsi, symbol_token_end
@@ -494,7 +518,7 @@ _tokenize:
     push r10                   ; token
     push rsi
     ; create the lexer
-    call _new_lexer
+    call _lexer_new
     mov r8, rax
     mov r9, [rax+token_vec_offset]           ; vec to store tokens
     ; tokenize
