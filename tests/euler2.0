@@ -1,0 +1,55 @@
+(define make-fib-generator
+   (fn ()
+      (define x0 0)
+      (define x1 1)
+      (fn ()
+         (define result x0)
+         (set! x0 x1)
+         (set! x1 (+ x1 result))
+         result)))
+
+(define last
+   (fn (xs)
+      (if (nil? xs) ()
+         (if (nil? (tail xs)) (head xs)
+            (last (tail xs))))))
+
+(define even? (fn (x) (= 0 (mod x 2))))
+
+(define even-fibs
+   (fn ()
+     (define f (make-fib-generator))
+     (define next
+        (fn () 
+           (define n (f))
+           (if (even? n) n (next))))
+     next
+   )
+)
+
+(define f (even-fibs))
+
+(define reduce
+   (fn (f z xs)
+      (if (nil? xs) z
+          (reduce f (f (head xs) z) (tail xs)))))
+
+(define reverse
+   (fn (xs) (reduce cons () xs)))
+
+(define fibs-less-than-n
+   (fn (n)
+      (define go
+         (fn (sum) 
+            (define x (f))
+            (if (< x n) 
+                (go (cons x sum)) 
+                sum)))
+      (reverse (go ()))
+   )
+)
+
+(define sum
+   (fn (xs) (reduce + 0 xs)))
+
+(sum (fibs-less-than-n 4000000))
