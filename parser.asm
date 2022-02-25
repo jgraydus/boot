@@ -25,13 +25,13 @@ section .text
 ;   rax - address of a vec of tokens
 ; output:
 ;   rax - address of parser
-_new_parser:
+_parser_new:
     push rbx
     mov rbx, rax
     mov rax, SIZEOF_PARSER
     call _malloc
-    mov [rax+0], rbx
-    mov qword [rax+8], 0
+    mov       [rax+token_vec_offset], rbx
+    mov qword [rax+next_token_index_offset], 0
     pop rbx
     ret
 
@@ -178,7 +178,7 @@ _parse:
     push r9
     push r10
     push r11
-    call _new_parser
+    call _parser_new
     mov r8, rax
     mov r9, 0
     mov r10, 0
@@ -203,13 +203,13 @@ _parse:
     mov r10, r11
     jmp .next
 .done:
-   mov rax, r9
-   pop r11
-   pop r10
-   pop r9
-   pop r8
-   pop rcx
-   ret
+    mov rax, r9
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    pop rcx
+    ret
 
 
 
