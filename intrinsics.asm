@@ -322,6 +322,56 @@ _intrinsic_eval:
     call _eval_proc
     ret
 
+_intrinsic_string_append:
+    push r8
+    push r9
+    push r10
+    mov r8, rax
+    call _get_pair_head
+    mov r9, rax
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov r10, rax
+    call _string_new
+    mov rsi, r9
+    call _string_append
+    mov rsi, r10
+    call _string_append 
+    pop r10 
+    pop r8
+    pop r8
+    ret
+
+_intrinsic_substring:
+    push r8
+    push r9
+    push r10
+    mov r10, rax
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    mov r8, rax
+    mov rax, r10
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    mov r9, rax
+    mov rax, r10
+    call _get_pair_head
+    call _substring
+    pop r10
+    pop r9
+    pop r8
+    ret
+
+_intrinsic_string_length:
+    call _get_pair_head
+    call _string_length 
+    call _make_integer_obj
+    ret
+
 %macro make_symbol 1
 section .rodata
     %%str: db %1
@@ -375,6 +425,9 @@ _add_intrinsics_to_env:
     add_binding "read", _intrinsic_read
     add_binding "parse", _intrinsic_parse
     add_binding "eval", _intrinsic_eval
+    add_binding "string-append", _intrinsic_string_append
+    add_binding "string-length", _intrinsic_string_length
+    add_binding "substring", _intrinsic_substring
     pop r9
     pop r8
     ret

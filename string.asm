@@ -405,7 +405,7 @@ _string_equals:
     mov r9, [r9+buffer_offset]
 .next_char:
     cmp rbx, 0
-    je .done           ; no characters left to compare. they must be equal
+    je .equal           ; no characters left to compare. they must be equal
     mov al, [r8]
     mov cl, [r9]
     cmp al, cl
