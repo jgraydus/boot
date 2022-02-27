@@ -2,6 +2,13 @@
 %include "env.inc"
 %include "object.inc"
 %include "string.inc"
+%include "sys_calls.inc"
+
+section .rodata
+    apply_error_1_msg: db "ERROR: value in procedure position evaluated to null"
+    apply_error_1_msg_len: equ $-apply_error_1_msg
+    apply_error_2_msg: db "ERROR: value in procedure position is not a procedure"
+    apply_error_2_msg_len: equ $-apply_error_2_msg
 
 section .text
 
@@ -176,7 +183,13 @@ _eval:
     mov rax, r8
     call _get_pair_head
     call _eval
-    ; TODO should check that it's a procedure
+    cmp rax, 0
+    je .apply_error_1
+    push rax
+    call _obj_type
+    cmp rax, TYPE_PROCEDURE_OBJ
+    jne .apply_error_2
+    pop rax
     mov r10, rax
     ; get and evaluate the params
     mov rax, r8
@@ -188,6 +201,32 @@ _eval:
     mov rsi, r9
     call _apply
     jmp .done
+.apply_error_1:
+    call _string_new
+    mov rsi, apply_error_1_msg
+    mov rcx, apply_error_1_msg_len
+    call _append_from_buffer
+    call _print_string
+    call _print_newline
+    mov rax, r8
+    call _object_to_string
+    call _print_string
+    call _print_newline
+    mov rax, 1
+    call _sys_exit
+.apply_error_2:
+    call _string_new
+    mov rsi, apply_error_2_msg
+    mov rcx, apply_error_2_msg_len
+    call _append_from_buffer
+    call _print_string
+    call _print_newline
+    mov rax, r8
+    call _object_to_string
+    call _print_string
+    call _print_newline
+    mov rax, 1
+    call _sys_exit 
 .other:
     ; other object types evaluate to themselves
     mov rax, r8
