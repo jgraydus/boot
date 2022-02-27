@@ -14,6 +14,7 @@ section .text
 
 ; input
 ;   rax - object to evaluate
+;   rcx - quote flag. changes evaluation strategy
 ;   rsi - address of environment
 ; output:
 ;   rax - resulting value of evaluating the input
@@ -30,6 +31,7 @@ _eval:
     ; remember the input
     mov r8, rax    ; object
     mov r9, rsi    ; environment
+    mov r13, rcx   ; quote flag
     ; null evaluates to null
     cmp r8, 0
     jne .go
@@ -39,9 +41,28 @@ _eval:
     ; get the type tag for the object
     mov rax, r8
     call _obj_type
+.unquote:
+    cmp rax, TYPE_PAIR_OBJ
+    jne .symbol 
+    mov rax, r8 
+    call _get_pair_head
+    call _symbol_is_unquote
+    jne .symbol
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov rsi, r9
+    mov rcx, 0
+    call _eval
+    jmp .done
 .symbol:
+    mov rax, r8
+    call _obj_type
     cmp rax, TYPE_SYMBOL_OBJ
     jne .pair
+    ; return self if quote flag is set
+    cmp rcx, 1
+    je .return_self
     ; #t and #f evaluate to themselves
     mov rax, r8
     call _symbol_is_true
@@ -64,6 +85,15 @@ _eval:
     ; or a special form
     cmp rax, TYPE_PAIR_OBJ
     jne .other
+    ; if quote flag is set, evaluate as quoted list
+    mov rcx, r13
+    cmp rcx, 1
+    jne .list
+    mov rax, r8
+    mov rcx, r11
+    call _eval_params 
+    jmp .done
+.list:
     mov rax, r8
     call _get_pair_head
     mov r10, rax
@@ -134,15 +164,15 @@ _eval:
     call _make_procedure_obj
     jmp .done
 .quote:
-    ; TODO with this implementation quote just returns its argument unchanged
-    ; however, it should really walk through the body of the argument and 
-    ; evaluate any unquoted symbols
     mov rax, r10
     call _symbol_is_quote
     jne .if
     mov rax, r8
     call _get_pair_tail
     call _get_pair_head
+    mov rsi, r9
+    mov rcx, 1     ; set the quote flag
+    call _eval
     jmp .done
 .if:
     mov rax, r10
@@ -233,6 +263,8 @@ _eval:
     jmp .done
 .error:
     ; TODO 
+.return_self:
+    mov rax, r8
 .done:
     pop r15
     pop r14
@@ -246,6 +278,7 @@ _eval:
 
 ; input:
 ;   rax - address of a list
+;   rcx - quote flag
 ;   rsi - address of environment
 ; output:
 ;   rax - address of a new list consisting of the result of evaluating everything from the input list
@@ -253,21 +286,26 @@ _eval_params:
     push r8
     push r9
     push r10
+    push r11
     mov r8, rax
     mov r10, rsi
+    mov r11, rcx
     cmp rax, 0
     je .done
     call _get_pair_head
+    mov rcx, r11
     call _eval
     mov r9, rax
     mov rax, r8
     call _get_pair_tail
     mov rsi, r10
+    mov rcx, r11
     call _eval_params 
     mov rcx, rax
     mov rax, r9
     call _make_pair_obj 
 .done:
+    pop r11
     pop r10
     pop r9
     pop r8

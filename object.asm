@@ -174,6 +174,7 @@ section .data
      set_txt:    db "set!"
      fn_txt:     db "fn"
      quote_txt:  db "quote"
+     unquote_txt:  db "unquote"
      if_txt:     db "if"
      true_txt:   db "#t"
      false_txt:  db "#f"
@@ -231,6 +232,14 @@ _symbol_is_fn:
 global _symbol_is_quote
 _symbol_is_quote:
     _symbol_is quote_txt, 5
+
+; input:
+;   rax - address of symbol
+; ouptut:
+;   rax - 1 if the symbol is unquote, 0 otherwise
+global _symbol_is_unquote
+_symbol_is_unquote:
+    _symbol_is unquote_txt, 7
 
 global _symbol_is_if
 _symbol_is_if:
