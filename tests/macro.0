@@ -1,0 +1,39 @@
+(define _and
+   (macro (x y)
+      (quote (if (unquote x) (bool (unquote y)) #f))))
+
+(define foo (fn ()
+   (print "foo")
+   #f))
+
+(define bar (fn ()
+   (print "bar")
+   #t))
+
+
+; (_and (foo) (bar))
+
+
+(define unzip 
+   (fn (xs)
+      (if (nil? xs) (list () ())
+          ((fn ()
+              (define rest (unzip (tail xs)))
+              (define as (head rest))
+              (define bs (head (tail rest)))
+              (define a (head (head xs)))
+              (define b (head (tail (head xs))))
+              (list (cons a as) (cons b bs))
+          )))))
+
+
+(define let
+    (macro (bindings body)
+        (define b (unzip bindings))
+        (define args (head b))
+        (define vals (head (tail b)))
+        (define f (quote (fn (unquote args) (unquote body))))
+        (cons f vals)))
+
+(if (= 47 (let ((x 42) (y 5)) (+ x y))) #t (exit 1))
+

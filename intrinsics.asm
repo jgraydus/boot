@@ -372,6 +372,36 @@ _intrinsic_string_length:
     call _make_integer_obj
     ret
 
+section .rodata
+    gen_sym: db "sym-"
+    gen_sym_len: equ $-gen_sym
+section .bss
+    gen_sym_counter: resq 1
+
+section .text
+
+_intrinsic_gen_sym:
+    push r8
+    push rsi
+    push rcx
+    mov rax, [gen_sym_counter]
+    inc rax
+    mov [gen_sym_counter], rax
+    call _make_integer_obj
+    call _object_to_string
+    mov r8, rax
+    call _string_new
+    mov rsi, gen_sym
+    mov rcx, gen_sym_len
+    call _append_from_buffer 
+    mov rsi, r8
+    call _string_append
+    call _make_symbol_obj
+    pop rcx
+    pop rsi
+    pop r8
+    ret
+
 %macro make_symbol 1
 section .rodata
     %%str: db %1
@@ -428,6 +458,7 @@ _add_intrinsics_to_env:
     add_binding "string-append", _intrinsic_string_append
     add_binding "string-length", _intrinsic_string_length
     add_binding "substring", _intrinsic_substring
+    add_binding "gen-sym", _intrinsic_gen_sym
     pop r9
     pop r8
     ret

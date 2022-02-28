@@ -9,6 +9,8 @@ extern _make_procedure_obj
 extern _get_proc_formal_params
 extern _get_proc_env
 extern _get_proc_body
+extern _get_proc_macro_flag
+extern _set_proc_macro_flag
 extern _make_intrinsic_obj
 extern _proc_is_intrinsic
 extern _object_to_string
@@ -21,6 +23,7 @@ extern _obj_type
 extern _symbol_is_define
 extern _symbol_is_set
 extern _symbol_is_fn
+extern _symbol_is_macro
 extern _symbol_is_quote
 extern _symbol_is_unquote
 extern _symbol_is_if

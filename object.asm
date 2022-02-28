@@ -169,25 +169,25 @@ _symbol_get_string:
     mov rax, [rax+16]
     ret
 
-section .data
-     define_txt: db "define"
-     set_txt:    db "set!"
-     fn_txt:     db "fn"
-     quote_txt:  db "quote"
-     unquote_txt:  db "unquote"
-     if_txt:     db "if"
+section .rodata
      true_txt:   db "#t"
+     true_txt_len: equ $-true_txt
      false_txt:  db "#f"
+     false_txt_len: equ $-false_txt
 
-%macro _symbol_is 2
+%macro _symbol_is 1
+section .rodata
+    %%str: db %1
+    %%len: equ $-%%str
+section .text
     push r8
     push r9
     mov r8, [rax+0]
     cmp r8, TYPE_SYMBOL_OBJ
     jne .not
     mov rax, [rax+16]
-    mov r8, %1    ; buffer
-    mov r9, %2    ; length
+    mov r8, %%str    ; buffer
+    mov r9, %%len    ; length
     call _string_equals_buffer
     jmp .done
 .not:
@@ -206,7 +206,7 @@ section .text
 ;   rax - 1 if the symbol is define, 0 otherwise
 global _symbol_is_define
 _symbol_is_define:
-    _symbol_is define_txt, 6
+    _symbol_is "define"
 
 ; input:
 ;   rax - address of symbol
@@ -215,7 +215,7 @@ _symbol_is_define:
 
 global _symbol_is_set
 _symbol_is_set:
-    _symbol_is set_txt, 4
+    _symbol_is "set!"
 
 ; input:
 ;   rax - address of symbol
@@ -223,7 +223,15 @@ _symbol_is_set:
 ;   rax - 1 if the symbol is fn, 0 otherwise
 global _symbol_is_fn
 _symbol_is_fn:
-    _symbol_is fn_txt, 2
+    _symbol_is "fn"
+
+; input:
+;   rax - address of symbol
+; ouptut:
+;   rax - 1 if the symbol is fn, 0 otherwise
+global _symbol_is_macro
+_symbol_is_macro:
+    _symbol_is "macro"
 
 ; input:
 ;   rax - address of symbol
@@ -231,7 +239,7 @@ _symbol_is_fn:
 ;   rax - 1 if the symbol is quote, 0 otherwise
 global _symbol_is_quote
 _symbol_is_quote:
-    _symbol_is quote_txt, 5
+    _symbol_is "quote"
 
 ; input:
 ;   rax - address of symbol
@@ -239,19 +247,19 @@ _symbol_is_quote:
 ;   rax - 1 if the symbol is unquote, 0 otherwise
 global _symbol_is_unquote
 _symbol_is_unquote:
-    _symbol_is unquote_txt, 7
+    _symbol_is "unquote"
 
 global _symbol_is_if
 _symbol_is_if:
-    _symbol_is if_txt, 2
+    _symbol_is "if"
 
 global _symbol_is_true
 _symbol_is_true:
-    _symbol_is true_txt, 2
+    _symbol_is "#t"
 
 global _symbol_is_false
 _symbol_is_false:
-    _symbol_is false_txt, 2
+    _symbol_is "#f"
 
 global _symbol_true
 _symbol_true:
@@ -259,7 +267,7 @@ _symbol_true:
     push rcx
     call _string_new
     mov rsi, true_txt
-    mov rcx, 2
+    mov rcx, true_txt_len
     call _append_from_buffer
     call _make_symbol_obj
     pop rcx
@@ -272,7 +280,7 @@ _symbol_false:
     push rcx
     call _string_new
     mov rsi, false_txt
-    mov rcx, 2
+    mov rcx, false_txt_len
     call _append_from_buffer
     call _make_symbol_obj
     pop rcx
@@ -326,6 +334,27 @@ _get_proc_env:
 global _get_proc_body
 _get_proc_body:
     mov rax, [rax+32]
+    ret
+
+global _get_proc_macro_flag
+_get_proc_macro_flag:
+    mov rax, [rax+8]
+    and rax, PROC_MACRO_FLAG
+    cmp rax, 0
+    je .done
+    mov rax, 1
+.done:
+    ret
+
+global _set_proc_macro_flag
+_set_proc_macro_flag:
+    push r8
+    mov r8, rax
+    mov rax, [r8+8]
+    or rax, PROC_MACRO_FLAG
+    mov [r8+8], rax
+    mov rax, r8
+    pop r8
     ret
 
 

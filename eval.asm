@@ -20,6 +20,7 @@ section .text
 ;   rax - resulting value of evaluating the input
 global _eval
 _eval:
+    push rcx
     push r8
     push r9
     push r10
@@ -41,7 +42,23 @@ _eval:
     ; get the type tag for the object
     mov rax, r8
     call _obj_type
+.quote:
+    cmp rax, TYPE_PAIR_OBJ
+    jne .symbol
+    mov rax, r8
+    call _get_pair_head
+    call _symbol_is_quote
+    jne .unquote
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov rsi, r9
+    mov rcx, 1     ; set the quote flag
+    call _eval
+    jmp .done
 .unquote:
+    mov rax, r8
+    call _obj_type
     cmp rax, TYPE_PAIR_OBJ
     jne .symbol 
     mov rax, r8 
@@ -61,7 +78,7 @@ _eval:
     cmp rax, TYPE_SYMBOL_OBJ
     jne .pair
     ; return self if quote flag is set
-    cmp rcx, 1
+    cmp r13, 1
     je .return_self
     ; #t and #f evaluate to themselves
     mov rax, r8
@@ -90,7 +107,7 @@ _eval:
     cmp rcx, 1
     jne .list
     mov rax, r8
-    mov rcx, r11
+    mov rcx, r13
     call _eval_params 
     jmp .done
 .list:
@@ -146,7 +163,7 @@ _eval:
     mov rax, r10
     call _symbol_is_fn
     cmp rax, 1
-    jne .quote
+    jne .macro
     ; get the param list
     mov rax, r8
     call _get_pair_tail
@@ -163,16 +180,27 @@ _eval:
     mov rdx, r11                ; body of fn
     call _make_procedure_obj
     jmp .done
-.quote:
+.macro:
     mov rax, r10
-    call _symbol_is_quote
+    call _symbol_is_macro
+    cmp rax, 1
     jne .if
+    ; get the param list
     mov rax, r8
     call _get_pair_tail
     call _get_pair_head
-    mov rsi, r9
-    mov rcx, 1     ; set the quote flag
-    call _eval
+    mov r10, rax
+    ; get the body
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_tail
+    mov r11, rax
+    ; build proc object
+    mov rax, r10                ; formal param list
+    mov rcx, r9                 ; env
+    mov rdx, r11                ; body of fn
+    call _make_procedure_obj
+    call _set_proc_macro_flag
     jmp .done
 .if:
     mov rax, r10
@@ -213,15 +241,19 @@ _eval:
     mov rax, r8
     call _get_pair_head
     call _eval
+    mov r10, rax
+    ; ensure valid proc object
     cmp rax, 0
     je .apply_error_1
-    push rax
     call _obj_type
     cmp rax, TYPE_PROCEDURE_OBJ
     jne .apply_error_2
-    pop rax
-    mov r10, rax
-    ; get and evaluate the params
+    mov rax, r10
+    ; macro flag determines whether or not to evaluate the arguments
+    call _get_proc_macro_flag
+    cmp rax, 1
+    je .apply_macro
+    ; get the params
     mov rax, r8
     call _get_pair_tail
     call _eval_params
@@ -230,6 +262,19 @@ _eval:
     mov rax, r10
     mov rsi, r9
     call _apply
+    jmp .done
+.apply_macro:
+    ; get the params
+    mov rax, r8
+    call _get_pair_tail
+    ; now apply the macro to the params
+    mov rdx, rax
+    mov rax, r10
+    mov rsi, r9
+    call _apply
+    ; evaluate the result of the macro application
+    mov rsi, r9
+    call _eval 
     jmp .done
 .apply_error_1:
     call _string_new
@@ -274,6 +319,7 @@ _eval:
     pop r10
     pop r9
     pop r8
+    pop rcx
     ret
 
 ; input:

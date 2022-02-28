@@ -39,3 +39,4 @@ TYPE_PROCEDURE_OBJ  equ 5
 %define GC_MARK_FLAG            1
 %define GC_ELIGIBLE_FLAG        2
 %define INTRINSIC_PROC_FLAG     8
+%define PROC_MACRO_FLAG        16
