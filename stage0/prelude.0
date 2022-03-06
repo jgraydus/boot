@@ -1,0 +1,48 @@
+(define map 
+  (fn (f xs)
+    (if (nil? xs) ()
+        (cons (f (head xs)) (map f (tail xs))))))
+
+(define length
+  (fn (xs)
+    (if (nil? xs) 0
+        (+ 1 (length (tail xs))))))
+
+(define reduce
+  (fn (f z xs)
+    (if (nil? xs) z
+        (reduce f (f z (head xs)) (tail xs)))))
+
+(define sum
+  (fn (xs)
+    (reduce + 0 xs)))
+
+(define prod
+  (fn (xs)
+    (reduce * 1 xs)))
+
+(define filter
+  (fn (p xs)
+      (if (nil? xs) ()
+          (if (p (head xs)) (cons p (filter p (tail xs)))
+              (filter p (tail xs))))))
+
+(define take
+  (fn (n xs)
+    (if (nil? xs) ()
+        (if (= 0 n) ()
+            (cons (head xs) (take (- n 1) xs))))))
+
+(define drop
+  (fn (n xs)
+      (if (nil? xs) ()
+          (if (= 0 n) xs
+              (drop (- n 1) (tail xs))))))
+
+(define reverse
+  (fn (xs) 
+    (define snoc (fn (xs x) (cons x xs)))
+    (reduce snoc () xs)
+  )
+)
+
