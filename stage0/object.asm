@@ -261,6 +261,10 @@ global _symbol_is_false
 _symbol_is_false:
     _symbol_is "#f"
 
+global _symbol_is_loop
+_symbol_is_loop:
+    _symbol_is "loop"
+
 global _symbol_true
 _symbol_true:
     push rsi

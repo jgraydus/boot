@@ -115,7 +115,17 @@ _eval:
     call _get_pair_head
     mov r10, rax
 ; special forms
+.loop:
+    call _symbol_is_loop
+    cmp rax, 1
+    jne .define
+.loop_go:
+    mov rax, r8
+    mov rcx, r13
+    call _eval_params
+    jmp .loop_go
 .define:
+    mov rax, r10
     call _symbol_is_define
     cmp rax, 1
     jne .set

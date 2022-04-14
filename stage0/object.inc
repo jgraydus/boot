@@ -31,4 +31,5 @@ extern _symbol_true
 extern _symbol_is_true
 extern _symbol_false
 extern _symbol_is_false
+extern _symbol_is_loop
 
