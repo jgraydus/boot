@@ -1,0 +1,20 @@
+- lexer:
+  - better error handling
+  - support ' shorthand for quotes (and , unquote shorthand?)
+
+- parser:
+  - better error handling
+  - support quote (and unquote?) shorthand
+
+- evaluation
+  - add more intrinsics
+  - add a 'spread' unquote operation?
+
+- other stuff
+  - load and evaluate prelude at start up
+  - repl
+  - implement hash table and use for environment
+  - ffi
+  - compiling
+  - tail call optimization
+

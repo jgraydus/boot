@@ -1,0 +1,117 @@
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; intrinsics (i.e. built-in functions):
+; env - gives the environment of the current scope
+; cons, list, head, tail, nil?
+; bool - converts truthy values to #t and falsey values to #f
+; +, -, *, /, mod
+; =, <, >
+; exit - stops the program
+; print - print a string representation of its argument
+; read - reads in a file as a string
+; parse - convert a string into an S-exp
+; eval - evaluate an S-exp
+; gen-sym - create a guaranteed unique symbol
+; string-append, string-length, substring
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+; transform into the application of a 0-arity function containing a 'define' for each binding
+(define let
+   (macro (bindings body)
+      (define make-def 
+         (fn (b)
+            (quote (define (unquote (head b)) 
+                           (unquote (nth 1 b))))))
+      (define defs (map make-def bindings))
+      (list
+         (concat (quote (fn ()))
+                 (concat defs (list body))))))
+
+(define not (fn (x) (if x #f #t)))
+
+; there is an intrinsic 'and', but it isn't short-circuiting
+(define and
+   (macro (x y)
+      (quote (let ((z (unquote x))) (if (not z) z (unquote y))))))
+
+(define or
+   (macro (x y)
+      (quote (let ((z (unquote x))) (if z z (unquote y))))))
+
+(define map 
+  (fn (f xs)
+    (if (nil? xs) ()
+        (cons (f (head xs)) (map f (tail xs))))))
+
+(define reduce
+  (fn (f z xs)
+    (if (nil? xs) z
+        (reduce f (f z (head xs)) (tail xs)))))
+
+(define filter
+  (fn (p xs)
+      (if (nil? xs) ()
+          (if (p (head xs)) (cons p (filter p (tail xs)))
+              (filter p (tail xs))))))
+
+(define zip
+   (fn (xs ys)
+      (if (or (nil? xs) (nil? ys)) ()
+          (cons (list (head xs) (head ys)) 
+                (zip (tail xs) (tail ys))))))
+
+(define unzip
+   (fn (xs)
+      (if (nil? xs) (list () ())
+         (let ((first (head xs))
+               (x (head first))
+               (y (nth 1 first))
+               (rest (unzip (tail xs)))
+               (xs (head rest))
+               (ys (nth 1 rest)))
+            (list (cons x xs) (cons y ys))))))
+
+(define length
+  (fn (xs)
+    (if (nil? xs) 0
+        (+ 1 (length (tail xs))))))
+
+(define nth
+   (fn (n xs)
+      (if (= 0 n) (head xs)
+                  (nth (- n 1) (tail xs)))))
+
+(define take
+  (fn (n xs)
+    (if (nil? xs) ()
+        (if (= 0 n) ()
+            (cons (head xs) (take (- n 1) xs))))))
+
+(define drop
+  (fn (n xs)
+      (if (nil? xs) ()
+          (if (= 0 n) xs
+              (drop (- n 1) (tail xs))))))
+
+(define concat
+  (fn (xs ys)
+     (if (nil? xs) ys
+         (cons (head xs) (concat (tail xs) ys)))))
+
+(define reverse
+  (fn (xs) 
+    (define snoc (fn (xs x) (cons x xs)))
+    (reduce snoc () xs)))
+
+(define sum
+  (fn (xs)
+    (reduce + 0 xs)))
+
+(define prod
+  (fn (xs)
+    (reduce * 1 xs)))
+
+
+
+
+
+
