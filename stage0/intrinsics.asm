@@ -280,7 +280,7 @@ _intrinsic_print:
     mov rax, 0
     ret
 
-_intrinsic_read:
+_intrinsic_read_file:
     push rdi
     push rsi
     push r8
@@ -309,6 +309,47 @@ _intrinsic_read:
     pop r8
     pop rsi
     pop rdi
+    ret
+
+%define READ_LINE_BUFFER_SIZE 1024
+section .bss
+    read_line_buffer: resb READ_LINE_BUFFER_SIZE
+section .text
+
+_intrinsic_read_line:
+    push rsi
+    push rdx
+    push rdi
+    push rcx
+    push r10
+    ; create the result string
+    call _string_new
+    mov r10, rax
+    ; read a line from stdin
+    mov rsi, read_line_buffer
+    mov rdx, READ_LINE_BUFFER_SIZE
+    mov rdi, STDIN_FILENO
+    call _sys_read
+    mov rcx, rax ; # of bytes read
+    ; when no bytes are read, just return the empty string
+    cmp rcx, 0
+    je .done
+    ; if the last character is a new line, exclude it
+    mov rdx, [read_line_buffer+rcx-1]
+    cmp rdx, 10 ; newline character
+    jne .append
+    dec rcx
+.append:
+    mov rax, r10
+    mov rsi, read_line_buffer
+    call _append_from_buffer
+.done:
+    mov rax, r10
+    pop r10 
+    pop rcx
+    pop rdi
+    pop rdx
+    pop rsi
     ret
 
 _intrinsic_parse:
@@ -452,7 +493,8 @@ _add_intrinsics_to_env:
     add_binding "mod", _intrinsic_mod
     add_binding "exit", _intrinsic_exit
     add_binding "print", _intrinsic_print
-    add_binding "read", _intrinsic_read
+    add_binding "read-line", _intrinsic_read_line
+    add_binding "read-file", _intrinsic_read_file
     add_binding "parse", _intrinsic_parse
     add_binding "eval", _intrinsic_eval
     add_binding "string-append", _intrinsic_string_append
