@@ -121,6 +121,7 @@ _eval:
     jne .define
 .loop_go:
     mov rax, r8
+    mov rsi, r9
     mov rcx, r13
     call _eval_params
     jmp .loop_go
