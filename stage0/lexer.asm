@@ -29,7 +29,7 @@ section .text
 %define next_character_index_offset   8
 %define token_vec_offset              16
 %define line_number_offset            24
-%define SIZEOF_LEXER                  24
+%define SIZEOF_LEXER                  32
 %define LEXER_VEC_SIZE                32
 
 ; input:
