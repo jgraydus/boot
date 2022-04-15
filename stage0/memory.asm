@@ -26,6 +26,10 @@ section .text
 global _print_memory_stats
 _print_memory_stats:
     push r8
+    push rax
+    push rdi
+    push rdx
+    push rsi
     mov rdi, print_buffer
     mov rdx, 256
     mov rsi, newline
@@ -48,6 +52,10 @@ _print_memory_stats:
     mov rdx, r8
     mov rsi, print_buffer
     call _flush_print_buffer
+    pop rsi
+    pop rdx
+    pop rdi
+    pop rax
     pop r8
     ret
     

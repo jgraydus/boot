@@ -2,7 +2,9 @@
 
 (define repl (fn ()
    (define read (fn () (parse (read-line))))
-   (loop (print (eval (read))))))
+   (loop
+      (print (eval (read)))
+      (gc-run))))
 
 (repl)
 

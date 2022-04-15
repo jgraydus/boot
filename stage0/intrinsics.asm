@@ -443,6 +443,15 @@ _intrinsic_gen_sym:
     pop r8
     ret
 
+_intrinsic_print_memory_stats:
+    call _print_memory_stats
+    ret
+
+_intrinsic_gc_run:
+    mov rax, rsi
+    call _gc_run
+    ret
+
 %macro make_symbol 1
 section .rodata
     %%str: db %1
@@ -501,6 +510,8 @@ _add_intrinsics_to_env:
     add_binding "string-length", _intrinsic_string_length
     add_binding "substring", _intrinsic_substring
     add_binding "gen-sym", _intrinsic_gen_sym
+    add_binding "print-memory-stats", _intrinsic_print_memory_stats
+    add_binding "gc-run", _intrinsic_gc_run
     pop r9
     pop r8
     ret
