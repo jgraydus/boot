@@ -54,6 +54,13 @@ _lexer_new:
     pop r8
     ret
 
+_lexer_free:
+    ; the garbage collector should free the input string
+    ; the vector of tokens is given to the parser which takes
+    ; responsibility for freeing it and the token objects
+    call _free
+    ret
+
 ; token object
 ;
 ; struct {
@@ -138,6 +145,11 @@ _make_right_paren:
     inc r8
     mov       [rax+token_end_index_offset],   r8
     pop r8
+    ret
+
+global _token_free
+_token_free:
+    call _free
     ret
 
 ; input:
@@ -535,6 +547,9 @@ _tokenize:
     call _token_type
     cmp rax, TOKEN_EOF
     jne .next_tok
+.done:
+    mov rax, r8
+    call _lexer_free
     mov rax, r9    ; return the vec
     pop rsi
     pop r10

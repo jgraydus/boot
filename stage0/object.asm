@@ -710,8 +710,8 @@ _gc_unmark:
     call _gc_unmark
     jmp .done
 .string:
-    cmp rax, TYPE_PAIR_OBJ
-    jne .string
+    cmp rax, TYPE_STRING_OBJ
+    jne .integer
     ; no op
     jmp .done
 .integer:
@@ -799,10 +799,12 @@ _gc_free_obj:
     jne .other
     mov rax, r8
     call _string_free
+    jmp .done
 .other:
     ; nothing extra to do for other object types 
     mov rax, r8
     call _free
+.done:
     pop r8
     ret
 

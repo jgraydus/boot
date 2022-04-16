@@ -35,6 +35,18 @@ _parser_new:
     pop rbx
     ret
 
+_parser_free:
+    push r8
+    mov r8, rax
+    ; free the vec of tokens
+    mov rax, [r8]
+    call _free
+    ; free the parser
+    mov rax, r8
+    call _free
+    pop r8
+    ret
+
 section .rodata
     unmatched_paren_msg: db "unmatched paren"
 
@@ -72,15 +84,16 @@ _parse_next:
     push rsi
     push rbx
     push rcx
+    push r13
     push r14
     push r15
     mov rbx, rax       ; parser
     call _parser_peek_next_token
-    mov rcx, rax       ; token
+    mov r13, rax       ; token
     mov rax, rbx
     ; increment index
     call _parser_advance
-    mov rax, rcx
+    mov rax, r13
     call _token_type
 .eof:
     cmp rax, TOKEN_EOF
@@ -90,20 +103,20 @@ _parse_next:
 .string:
     cmp rax, TOKEN_STRING
     jne .integer
-    mov rax, rcx
+    mov rax, r13
     call _token_value
     jmp .done
 .integer:
     cmp rax, TOKEN_INTEGER
     jne .symbol
-    mov rax, rcx
+    mov rax, r13
     call _token_value
     call _make_integer_obj
     jmp .done
 .symbol:
     cmp rax, TOKEN_SYMBOL
     jne .list
-    mov rax, rcx
+    mov rax, r13
     call _token_value
     call _make_symbol_obj
     jmp .done
@@ -159,8 +172,13 @@ _parse_next:
 .error:
     ; TODO
 .done:
+    push rax
+    mov rax, r13
+    call _token_free
+    pop rax
     pop r15
     pop r14
+    pop r13
     pop rcx
     pop rbx
     pop rsi
@@ -203,6 +221,8 @@ _parse:
     mov r10, r11
     jmp .next
 .done:
+    mov rax, r8
+    call _parser_free
     mov rax, r9
     pop r11
     pop r10
