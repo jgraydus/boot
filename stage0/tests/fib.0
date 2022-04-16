@@ -1,0 +1,23 @@
+(define fib
+   (fn (n)
+      (define aux
+         (fn (a b m)
+            (if (= m 0) 
+                a 
+                (aux b (+ a b) (- m 1)))))
+      (aux 0 1 n)))
+
+(define map
+   (fn (f xs)
+      (if (nil? xs) 
+          () 
+          (cons (f (head xs)) (map f (tail xs))))))
+
+(define range
+   (fn (start end)
+      (if (> start end) 
+          () 
+          (cons start (range (+ start 1) end)))))
+
+(map fib (range 0 30))
+
