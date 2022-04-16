@@ -46,7 +46,6 @@ _string_new:
 global _string_free
 _string_free:
     push r8
-    call _print_string
     mov r8, rax
     ; free the buffer
     mov rax, [r8+buffer_offset]
