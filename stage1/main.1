@@ -2,8 +2,11 @@
 
 (define repl (fn ()
    (define read (fn () (parse (read-line))))
+   (define $1 ())
    (loop
-      (print (eval (read)))
+      (set! $1 (eval (read)))
+      (print $1)
+      (set! $1 ())
       (gc-run))))
 
 (repl)

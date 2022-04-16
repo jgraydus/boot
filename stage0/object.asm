@@ -356,13 +356,7 @@ _get_proc_macro_flag:
 
 global _set_proc_macro_flag
 _set_proc_macro_flag:
-    push r8
-    mov r8, rax
-    mov rax, [r8+object_flags_offset]
-    or rax, PROC_MACRO_FLAG
-    mov [r8+object_flags_offset], rax
-    mov rax, r8
-    pop r8
+    or QWORD [rax+object_flags_offset], PROC_MACRO_FLAG
     ret
 
 
@@ -658,7 +652,7 @@ _obj_type:
 ;   rax - address of object
 ;   rdx - flag
 ; output:
-;   1 if the flag is set. 0 if the flag is not set
+;   rax - 1 if the flag is set. 0 if the flag is not set
 _obj_get_flag:
     push r8
     mov r8, [rax+object_flags_offset]
@@ -676,27 +670,21 @@ _obj_get_flag:
 ; input:
 ;   rax - address of object
 ;   rdx - flag
+; output:
+;   rax - address of object
 _obj_set_flag:
-    push r8
-    mov r8, [rax+object_flags_offset]
-    or r8, rdx
-    mov [rax+object_flags_offset], r8
-    pop r8
+    or [rax+object_flags_offset], rdx
     ret
 
 ; input:
 ;   rax - address of object
 ;   rdx - flag
+; output:
+;   rax - address of object
 _obj_unset_flag:
-    push r8
-    push r9
-    mov r8, [rax+object_flags_offset]
-    mov r9, rdx
-    not r9
-    and r8, r9
-    mov [rax+object_flags_offset], r8
-    pop r9
-    pop r8
+    not rdx
+    and [rax+object_flags_offset], rdx
+    not rdx
     ret
 
 ; set the gc mark flag on all objects
@@ -743,15 +731,13 @@ _gc_unmark:
     call _obj_get_flag
     cmp rax, 0
     je .done
-    ; unset mark flag, set eligible flag
     mov rax, r8
     mov rdx, GC_MARK_FLAG
     call _obj_unset_flag
-    mov rdx, GC_ELIGIBLE_FLAG
-    call _obj_set_flag
     ; follow references inside objects
     ; get object type
-    mov rax, [r8+object_type_offset]
+    mov rax, r8
+    call _obj_type
 .pair:
     cmp rax, TYPE_PAIR_OBJ
     jne .string
@@ -822,14 +808,7 @@ _gc_reclaim:
     mov rsi, r9
     call _vec_get_value_at
     mov r10, rax
-    ; if the gc eligible flag is not set, skip
-    mov rax, r10
-    mov rdx, GC_ELIGIBLE_FLAG
-    call _obj_get_flag
-    cmp rax, 0
-    je .next
     ; if the gc mark flag is set, free the object
-    mov rax, r10
     mov rdx, GC_MARK_FLAG
     call _obj_get_flag
     cmp rax, 0
@@ -839,6 +818,7 @@ _gc_reclaim:
     mov rsi, r9
     call _vec_remove
     call _gc_free_obj
+    jmp .next
 .done:
     pop r10
     pop r9
@@ -864,22 +844,6 @@ _gc_free_obj:
     pop r8
     ret
 
-section .data
-    msg1: db 10, "HERE", 10
-    msg1l: dq 8
-
-section .text
-
-_print_message:
-    push rsi
-    push rdx
-    mov rsi, msg1
-    mov rdx, [msg1l]
-    call _flush_print_buffer
-    pop rdx
-    pop rsi
-    ret
-
 ; input:
 ;   rax - address of root object. all live objects should be reachable from this object
 global _gc_run
@@ -889,6 +853,7 @@ _gc_run:
     call _gc_mark
     mov rax, r8
     call _gc_unmark
+    mov rax, r8
     call _gc_reclaim
     pop r8
     ret
