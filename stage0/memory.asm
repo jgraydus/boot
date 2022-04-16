@@ -4,9 +4,6 @@
 
 HEAP_SIZE         equ 1024*1024
 
-section .text
-
-
 section .bss
     heap:      resq 1
     next:      resq 1
