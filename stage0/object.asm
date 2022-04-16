@@ -2,6 +2,7 @@
 %include "memory.inc"
 %include "string.inc"
 %include "vec.inc"
+%include "print.inc"
 
 section .bss
     gc_registry: resq 1
@@ -32,6 +33,9 @@ _gc_register_obj:
     pop rax
     ret
 
+%define object_type_offset    0
+%define object_flags_offset   8
+
 ; pair object 
 ;
 ; struct {
@@ -54,8 +58,8 @@ _make_pair_obj:
     push rax
     mov rax, SIZEOF_PAIR_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_PAIR_OBJ   ; type
-    mov qword [rax+8], 0               ; flags
+    mov qword [rax+object_type_offset], TYPE_PAIR_OBJ   ; type
+    mov qword [rax+object_flags_offset], 0               ; flags
     pop rcx
     mov [rax+16], rcx                  ; head
     pop rcx
@@ -121,8 +125,8 @@ _make_integer_obj:
     mov rcx, rax
     mov rax, SIZEOF_INTEGER_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_INTEGER_OBJ
-    mov qword [rax+8], 0
+    mov qword [rax+object_type_offset], TYPE_INTEGER_OBJ
+    mov qword [rax+object_flags_offset], 0
     mov [rax+16], rcx
     call _gc_register_obj
     pop rcx
@@ -158,8 +162,8 @@ _make_symbol_obj:
    mov rcx, rax
    mov rax, SIZEOF_SYMBOL_OBJ
    call _malloc
-   mov qword [rax+0], TYPE_SYMBOL_OBJ
-   mov qword [rax+8], 0
+   mov qword [rax+object_type_offset], TYPE_SYMBOL_OBJ
+   mov qword [rax+object_flags_offset], 0
    mov [rax+16], rcx
    call _gc_register_obj
    pop rcx
@@ -314,8 +318,8 @@ _make_procedure_obj:
     push rax
     mov rax, SIZEOF_PROCEDURE_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_PROCEDURE_OBJ
-    mov qword [rax+8], 0
+    mov qword [rax+object_type_offset], TYPE_PROCEDURE_OBJ
+    mov qword [rax+object_flags_offset], 0
     pop rcx
     mov [rax+16], rcx
     pop rcx
@@ -342,7 +346,7 @@ _get_proc_body:
 
 global _get_proc_macro_flag
 _get_proc_macro_flag:
-    mov rax, [rax+8]
+    mov rax, [rax+object_flags_offset]
     and rax, PROC_MACRO_FLAG
     cmp rax, 0
     je .done
@@ -354,9 +358,9 @@ global _set_proc_macro_flag
 _set_proc_macro_flag:
     push r8
     mov r8, rax
-    mov rax, [r8+8]
+    mov rax, [r8+object_flags_offset]
     or rax, PROC_MACRO_FLAG
-    mov [r8+8], rax
+    mov [r8+object_flags_offset], rax
     mov rax, r8
     pop r8
     ret
@@ -372,8 +376,8 @@ _make_intrinsic_obj:
     mov r8, rax
     mov rax, SIZEOF_PROCEDURE_OBJ
     call _malloc
-    mov qword [rax+0], TYPE_PROCEDURE_OBJ
-    mov qword [rax+8], INTRINSIC_PROC_FLAG
+    mov qword [rax+object_type_offset], TYPE_PROCEDURE_OBJ
+    mov qword [rax+object_flags_offset], INTRINSIC_PROC_FLAG
     mov qword [rax+16], 0
     mov qword [rax+24], 0
     mov [rax+32], r8
@@ -383,7 +387,7 @@ _make_intrinsic_obj:
 
 global _proc_is_intrinsic
 _proc_is_intrinsic:
-    mov rax, [rax+8]
+    mov rax, [rax+object_flags_offset]
     and rax, INTRINSIC_PROC_FLAG
     cmp rax, INTRINSIC_PROC_FLAG
     je .yes
@@ -428,7 +432,7 @@ _object_to_string:
     jmp .done
 .go:
     mov rbx, rax
-    mov rax, [rbx+0]   
+    mov rax, [rbx+object_type_offset]
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
     jne .string
@@ -471,7 +475,7 @@ _object_to_string:
     call _get_pair_tail
     cmp rax, 0
     je .list
-    mov rax, [rax+0]
+    mov rax, [rax+object_type_offset]
     cmp rax, TYPE_PAIR_OBJ
     je .list
     ; head to string
@@ -501,7 +505,7 @@ _object_to_string:
     call _append_from_buffer
     jmp .done 
 .list:
-    mov rax, [rbx+0]
+    mov rax, [rbx+object_type_offset]
     cmp rax, TYPE_PAIR_OBJ
     jne .error
     call _string_new
@@ -572,8 +576,8 @@ _obj_equals:
     jmp .not_equal      ; rax is null, rcx is not null. not equal
 .both_not_null:
     ; check that both object have the same type
-    mov rax, [r8+0]
-    cmp rax, [r9+0]
+    mov rax, [r8+object_type_offset]
+    cmp rax, [r9+object_type_offset]
     jne .not_equal
     ; compare based on object type
     cmp rax, TYPE_PAIR_OBJ
@@ -647,33 +651,80 @@ _obj_equals:
 ;   rax - type tag of object
 global _obj_type
 _obj_type:
-    mov rax, [rax+0]
+    mov rax, [rax+object_type_offset]
     ret
 
+; input:
+;   rax - address of object
+;   rdx - flag
+; output:
+;   1 if the flag is set. 0 if the flag is not set
+_obj_get_flag:
+    push r8
+    mov r8, [rax+object_flags_offset]
+    and r8, rdx
+    cmp r8, 0
+    je .false
+    mov rax, 1
+    jmp .done
+.false:
+    mov rax, 0
+.done:
+    pop r8
+    ret
+
+; input:
+;   rax - address of object
+;   rdx - flag
+_obj_set_flag:
+    push r8
+    mov r8, [rax+object_flags_offset]
+    or r8, rdx
+    mov [rax+object_flags_offset], r8
+    pop r8
+    ret
+
+; input:
+;   rax - address of object
+;   rdx - flag
+_obj_unset_flag:
+    push r8
+    push r9
+    mov r8, [rax+object_flags_offset]
+    mov r9, rdx
+    not r9
+    and r8, r9
+    mov [rax+object_flags_offset], r8
+    pop r9
+    pop r8
+    ret
 
 ; set the gc mark flag on all objects
 _gc_mark:
     push r8
-    push r9
+    push rsi
+    push rax
+    push rdx
     mov rax, [gc_registry]
     call _vec_length
     mov r8, rax
 .next:
-    dec r8
     cmp r8, 0
     je .done
+    dec r8
     ; get object
     mov rax, [gc_registry]
     mov rsi, r8
     call _vec_get_value_at
     ; set mark flag
-    mov r9, [rax+8]
-    or r9, GC_MARK_FLAG
-    mov [rax+8], r9
+    mov rdx, GC_MARK_FLAG
+    call _obj_set_flag
     ; go to next object
     jmp .next
 .done:
-    pop r9
+    pop rdx
+    pop rax
+    pop rsi
     pop r8
     ret
 
@@ -681,24 +732,26 @@ _gc_mark:
 ;   rax - root object
 _gc_unmark:
     push r8
+    push rdx
     mov r8, rax
     ; nothing to do for nil
     cmp r8, 0
     je .done
     ; stop if already unmarked
-    mov rax, [r8+8]
-    and rax, GC_MARK_FLAG
+    mov rax, r8
+    mov rdx, GC_MARK_FLAG
+    call _obj_get_flag
     cmp rax, 0
-    jne .done
+    je .done
     ; unset mark flag, set eligible flag
-    mov rax, GC_MARK_FLAG
-    not rax
-    and rax, [r8+8]
-    or rax, GC_ELIGIBLE_FLAG
-    mov [r8+8], rax
+    mov rax, r8
+    mov rdx, GC_MARK_FLAG
+    call _obj_unset_flag
+    mov rdx, GC_ELIGIBLE_FLAG
+    call _obj_set_flag
     ; follow references inside objects
     ; get object type
-    mov rax, [r8+0]
+    mov rax, [r8+object_type_offset]
 .pair:
     cmp rax, TYPE_PAIR_OBJ
     jne .string
@@ -716,19 +769,19 @@ _gc_unmark:
     jmp .done
 .integer:
     cmp rax, TYPE_INTEGER_OBJ
-    jne .string
+    jne .symbol
     ; no op
     jmp .done
 .symbol:
     cmp rax, TYPE_SYMBOL_OBJ
-    jne .string
+    jne .procedure
     mov rax, r8
     call _symbol_get_string
     call _gc_unmark
     jmp .done
 .procedure:
     cmp rax, TYPE_PROCEDURE_OBJ
-    jne .string
+    jne .done
     ; don't do anything for intrinsics
     mov rax, r8
     call _proc_is_intrinsic
@@ -745,6 +798,7 @@ _gc_unmark:
     call _gc_unmark
     jmp .done
 .done:
+    pop rdx
     pop r8
     ret
 
@@ -755,7 +809,7 @@ _gc_reclaim:
     push r9
     push r10
     mov r8, [gc_registry]
-    ; get the index of the last object
+    ; get the number of objects
     mov rax, r8
     call _vec_length
     mov r9, rax
@@ -769,13 +823,15 @@ _gc_reclaim:
     call _vec_get_value_at
     mov r10, rax
     ; if the gc eligible flag is not set, skip
-    mov rax, [r10+8]
-    and rax, GC_ELIGIBLE_FLAG
+    mov rax, r10
+    mov rdx, GC_ELIGIBLE_FLAG
+    call _obj_get_flag
     cmp rax, 0
-    je .done
+    je .next
     ; if the gc mark flag is set, free the object
-    mov rax, [r10+8]
-    and rax, GC_MARK_FLAG
+    mov rax, r10
+    mov rdx, GC_MARK_FLAG
+    call _obj_get_flag
     cmp rax, 0
     je .next
     mov rax, r10
@@ -806,6 +862,22 @@ _gc_free_obj:
     call _free
 .done:
     pop r8
+    ret
+
+section .data
+    msg1: db 10, "HERE", 10
+    msg1l: dq 8
+
+section .text
+
+_print_message:
+    push rsi
+    push rdx
+    mov rsi, msg1
+    mov rdx, [msg1l]
+    call _flush_print_buffer
+    pop rdx
+    pop rsi
     ret
 
 ; input:
