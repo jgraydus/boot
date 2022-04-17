@@ -10,7 +10,7 @@
 (if (not (= foobar "foobar")) (exit 1) ())
 
 (define greeting "hello, world!")
-(if (not (= "hello" (substring greeting 0 5))) (exit 1) ())
+(if (not (= "hello" (substring 0 5 greeting))) (exit 1) ())
 
 
 (if (not (= 6 (string-length foobar))) (exit 1) ())

@@ -389,17 +389,17 @@ _intrinsic_substring:
     push r9
     push r10
     mov r10, rax
-    call _get_pair_tail
     call _get_pair_head
     call _integer_get_value
     mov r8, rax
     mov rax, r10
     call _get_pair_tail
-    call _get_pair_tail
     call _get_pair_head
     call _integer_get_value
     mov r9, rax
     mov rax, r10
+    call _get_pair_tail
+    call _get_pair_tail
     call _get_pair_head
     call _substring
     pop r10

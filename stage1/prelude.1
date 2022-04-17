@@ -128,6 +128,25 @@
    (fn (start end)
       (if (> start end) () (cons start (range (+ start 1) end)))))
 
+(define char-at
+   (fn (n str) (substring str n (+ n 1))))
 
+(define starts-with
+   (fn (str src)
+      (let ((n (string-length str))
+            (m (string-length src)))
+        (if (> n m) #f (= str (substring 0 n src))))))
 
+; todo replace with a better algorithm
+(define index-of
+   (fn (str src)
+      (define n (string-length str))
+      (define stop (- (string-length src) n))
+      (define go (fn (start)
+          (if (> start stop)
+              () ; not found
+              (if (starts-with str (substring start (+ start n) src))
+                  start
+                  (go (+ 1 start))))))
+      (go 0)))
 
