@@ -40,6 +40,21 @@
          (concat (quote (fn ()))
                  (concat defs (list body))))))
 
+; cond expands into nested ifs
+(define cond
+   (macro (cs)
+      (define build
+         (fn (cs)
+            (if (nil? cs)
+                ()
+                (let ((first (head cs))
+                      (rest  (tail cs))
+                      (pred (head first))
+                      (body (head (tail first))))
+                   (quote (if (unquote pred) (unquote body) (unquote (build rest))))))))
+      (build cs)))
+
+
 (define not (fn (x) (if x #f #t)))
 
 ; there is an intrinsic 'and', but it isn't short-circuiting
@@ -64,7 +79,8 @@
 (define filter
   (fn (p xs)
       (if (nil? xs) ()
-          (if (p (head xs)) (cons p (filter p (tail xs)))
+          (if (p (head xs))
+              (cons (head xs) (filter p (tail xs)))
               (filter p (tail xs))))))
 
 (define zip
@@ -89,6 +105,8 @@
     (if (nil? xs) 0
         (+ 1 (length (tail xs))))))
 
+(define const (fn (x) (fn (_) x)))
+
 (define nth
    (fn (n xs)
       (if (= 0 n) (head xs)
@@ -96,14 +114,13 @@
 
 (define take
   (fn (n xs)
-    (if (nil? xs) ()
-        (if (= 0 n) ()
-            (cons (head xs) (take (- n 1) xs))))))
+     (if (or (nil? xs) (= n 0)) ()
+         (cons (head xs) (take (- n 1) (tail xs))))))
 
 (define drop
   (fn (n xs)
       (if (nil? xs) ()
-          (if (= 0 n) xs
+          (if (= n 0) xs
               (drop (- n 1) (tail xs))))))
 
 (define concat
@@ -143,10 +160,8 @@
       (define n (string-length str))
       (define stop (- (string-length src) n))
       (define go (fn (start)
-          (if (> start stop)
-              () ; not found
-              (if (starts-with str (substring start (+ start n) src))
-                  start
+          (if (> start stop) ()
+              (if (starts-with str (substring start (+ start n) src)) start
                   (go (+ 1 start))))))
       (go 0)))
 
