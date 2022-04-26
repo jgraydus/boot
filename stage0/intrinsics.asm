@@ -413,6 +413,38 @@ _intrinsic_string_length:
     call _make_integer_obj
     ret
 
+; convert the first character of a string to the ascii value
+_intrinsic_ord:
+    push rsi
+    push rdi
+    call _get_pair_head
+    mov rsi, rax
+    mov rdi, 0
+    call _string_char_at
+    call _make_integer_obj
+    pop rdi
+    pop rsi
+    ret
+
+section .bss
+    chr_buffer: resb 1
+section .text
+
+; convert an integer value to a string consisting of the corresponding ascii character
+_intrinsic_chr:
+    push rsi
+    push rcx
+    call _get_pair_head
+    call _integer_get_value
+    mov [chr_buffer], ax
+    call _string_new
+    mov rsi, chr_buffer
+    mov rcx, 1
+    call _append_from_buffer
+    pop rcx
+    pop rsi
+    ret
+
 section .rodata
     gen_sym: db "sym-"
     gen_sym_len: equ $-gen_sym
@@ -509,6 +541,8 @@ _add_intrinsics_to_env:
     add_binding "string-append", _intrinsic_string_append
     add_binding "string-length", _intrinsic_string_length
     add_binding "substring", _intrinsic_substring
+    add_binding "ord", _intrinsic_ord
+    add_binding "chr", _intrinsic_chr
     add_binding "gen-sym", _intrinsic_gen_sym
     add_binding "print-memory-stats", _intrinsic_print_memory_stats
     add_binding "gc-run", _intrinsic_gc_run
