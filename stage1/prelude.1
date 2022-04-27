@@ -66,6 +66,12 @@
    (macro (x y)
       (quote (let ((z (unquote x))) (if z z (unquote y))))))
 
+(define <=
+   (fn (x y) (or (= x y) (< x y))))
+
+(define >=
+   (fn (x y) (or (= x y) (> x y))))
+
 (define map 
   (fn (f xs)
     (if (nil? xs) ()
@@ -148,7 +154,7 @@
 (define char-at
    (fn (n str) (substring str n (+ n 1))))
 
-(define starts-with
+(define starts-with?
    (fn (str src)
       (let ((n (string-length str))
             (m (string-length src)))
@@ -161,7 +167,7 @@
       (define stop (- (string-length src) n))
       (define go (fn (start)
           (if (> start stop) ()
-              (if (starts-with str (substring start (+ start n) src)) start
+              (if (starts-with? str (substring start (+ start n) src)) start
                   (go (+ 1 start))))))
       (go 0)))
 
