@@ -1,4 +1,5 @@
 %include "constants.inc"
+%include "gc.inc"
 %include "memory.inc"
 %include "object.inc"
 %include "print.inc"

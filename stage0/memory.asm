@@ -2,7 +2,7 @@
 %include "print.inc"
 %include "sys_calls.inc"
 
-HEAP_SIZE         equ 1024*1024*10   ; 10 MB
+HEAP_SIZE         equ 1024*1024*100   ; 100 MB
 
 section .bss
     heap:      resq 1

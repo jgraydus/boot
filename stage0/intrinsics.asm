@@ -1,6 +1,7 @@
 %include "constants.inc"
 %include "env.inc"
 %include "eval.inc"
+%include "gc.inc"
 %include "lexer.inc"
 %include "memory.inc"
 %include "object.inc"

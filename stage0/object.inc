@@ -1,6 +1,3 @@
-extern _gc_init
-extern _gc_register_obj
-extern _gc_run
 extern _make_pair_obj
 extern _make_integer_obj
 extern _integer_get_value
@@ -20,6 +17,9 @@ extern _get_pair_tail
 extern _set_pair_tail
 extern _obj_equals
 extern _obj_type
+extern _obj_get_flag
+extern _obj_set_flag
+extern _obj_unset_flag
 extern _symbol_is_define
 extern _symbol_is_set
 extern _symbol_is_fn
@@ -32,4 +32,5 @@ extern _symbol_is_true
 extern _symbol_false
 extern _symbol_is_false
 extern _symbol_is_loop
+extern _symbol_get_string
 
