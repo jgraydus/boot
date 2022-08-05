@@ -9,6 +9,8 @@ extern _get_proc_body
 extern _get_proc_macro_flag
 extern _set_proc_macro_flag
 extern _make_intrinsic_obj
+extern _make_continuation_obj
+extern _get_continuation_flag
 extern _proc_is_intrinsic
 extern _object_to_string
 extern _get_pair_head
@@ -32,5 +34,5 @@ extern _symbol_is_true
 extern _symbol_false
 extern _symbol_is_false
 extern _symbol_is_loop
+extern _symbol_is_with_continue_from_here
 extern _symbol_get_string
-

@@ -1,0 +1,20 @@
+
+
+(define for-each
+  (fn (lst proc)
+     (define x lst)
+     (with-continue-from-here
+        (fn (continue)
+           (loop
+              (if (nil? x)
+                  (continue)
+                  (list (proc (head x)) (set! x (tail x)))))))))
+
+(for-each (list 1 2 3) print)
+
+(with-continue-from-here
+   (fn (continue)
+     (print "will be printed")
+     (continue)
+     (print "will NOT be printed")))
+

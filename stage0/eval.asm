@@ -115,7 +115,29 @@ _eval:
     call _get_pair_head
     mov r10, rax
 ; special forms
+.with_continue_from_here:
+    mov rax, r10
+    call _symbol_is_with_continue_from_here
+    cmp rax, 1 
+    jne .loop
+    mov rax, rsp
+    call _make_continuation_obj
+    mov rcx, 0
+    call _make_pair_obj
+    mov r11, rax
+    ; cons the argument (must be a function) onto the list consisting of the continuation
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov rcx, r11
+    call _make_pair_obj
+    ; evaluate
+    mov rsi, r9
+    mov rcx, r13
+    call _eval
+    jmp .done
 .loop:
+    mov rax, r10
     call _symbol_is_loop
     cmp rax, 1
     jne .define
@@ -260,7 +282,11 @@ _eval:
     cmp rax, TYPE_PROCEDURE_OBJ
     jne .apply_error_2
     mov rax, r10
+    call _get_continuation_flag
+    cmp rax, 1
+    je .do_continuation
     ; macro flag determines whether or not to evaluate the arguments
+    mov rax, r10
     call _get_proc_macro_flag
     cmp rax, 1
     je .apply_macro
@@ -273,6 +299,12 @@ _eval:
     mov rax, r10
     mov rsi, r9
     call _apply
+    jmp .done
+.do_continuation:
+    ; restore the stack pointer to the value saved in the continuation object
+    mov rax, r10
+    call _get_proc_body
+    mov rsp, rax
     jmp .done
 .apply_macro:
     ; get the params
@@ -491,8 +523,6 @@ _eval_proc:
     pop r9
     pop r8
     ret
-
-
 
 
 

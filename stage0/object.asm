@@ -269,6 +269,10 @@ _symbol_false:
     pop rsi
     ret
 
+global _symbol_is_with_continue_from_here
+_symbol_is_with_continue_from_here:
+    _symbol_is "with-continue-from-here"
+
 ; procedure object
 ;
 ; struct {
@@ -280,6 +284,9 @@ _symbol_false:
 ; }
 
 %define SIZEOF_PROCEDURE_OBJ   40
+%define proc_params_offset     16
+%define proc_env_offset        24
+%define proc_body_offset       32
 
 ; input:
 ;   rax - address of formal param list
@@ -295,27 +302,27 @@ _make_procedure_obj:
     mov qword [rax+object_type_offset], TYPE_PROCEDURE_OBJ
     mov qword [rax+object_flags_offset], 0
     pop rcx
-    mov [rax+16], rcx
+    mov [rax+proc_params_offset], rcx
     pop rcx
-    mov [rax+24], rcx
+    mov [rax+proc_env_offset], rcx
     pop rcx
-    mov [rax+32], rcx
+    mov [rax+proc_body_offset], rcx
     call _gc_register_obj
     ret
 
 global _get_proc_formal_params
 _get_proc_formal_params:
-    mov rax, [rax+16]
+    mov rax, [rax+proc_params_offset]
     ret
 
 global _get_proc_env
 _get_proc_env:
-    mov rax, [rax+24]
+    mov rax, [rax+proc_env_offset]
     ret
 
 global _get_proc_body
 _get_proc_body:
-    mov rax, [rax+32]
+    mov rax, [rax+proc_body_offset]
     ret
 
 global _get_proc_macro_flag
@@ -333,6 +340,17 @@ _set_proc_macro_flag:
     or QWORD [rax+object_flags_offset], PROC_MACRO_FLAG
     ret
 
+global _get_continuation_flag
+_get_continuation_flag:
+    mov rax, [rax+object_flags_offset]
+    and rax, CONTINUATION_FLAG
+    cmp rax, 0
+    je .done
+    mov rax, 1
+.done:
+    ret
+
+
 ; input:
 ;   rax - pointer to native code
 ; output:
@@ -345,9 +363,28 @@ _make_intrinsic_obj:
     call _malloc
     mov qword [rax+object_type_offset], TYPE_PROCEDURE_OBJ
     mov qword [rax+object_flags_offset], INTRINSIC_PROC_FLAG
-    mov qword [rax+16], 0
-    mov qword [rax+24], 0
-    mov [rax+32], r8
+    mov qword [rax+proc_params_offset], 0
+    mov qword [rax+proc_env_offset], 0
+    mov [rax+proc_body_offset], r8
+    call _gc_register_obj
+    pop r8
+    ret
+
+; input:
+;   rax - value of rsp to restore when continuation is invoked
+; output
+;   rax - address of new continuation object
+global _make_continuation_obj
+_make_continuation_obj:
+    push r8
+    mov r8, rax
+    mov rax, SIZEOF_PROCEDURE_OBJ
+    call _malloc
+    mov qword [rax+object_type_offset], TYPE_PROCEDURE_OBJ
+    mov qword [rax+object_flags_offset], CONTINUATION_FLAG
+    mov qword [rax+proc_params_offset], 0   ; unused
+    mov qword [rax+proc_env_offset], 0      ; unused
+    mov [rax+proc_body_offset], r8          ; the BSP value to restore
     call _gc_register_obj
     pop r8
     ret
