@@ -8,14 +8,16 @@ section .bss
     heap:      resq 1
     next:      resq 1
     remaining: resq 1
+    allocated: resq 1
     free_list: resq 1
     print_buffer: resb 256
 
 section .data
     oom:       db "ERROR: Out of memory", 10
     omm_len:   dq 21
-    heap_size_msg: db   "heap size: ", 0
+    heap_size_msg:   db "heap size: ", 0
     used_memory_msg: db "used:      ", 0
+    allocated_msg:   db "allocated: ", 0
     newline: db 10, 0
 
 section .text
@@ -44,6 +46,12 @@ _print_memory_stats:
     call _print_unsigned_int
     mov rsi, newline
     call _print_zero_terminated_string
+    mov rsi, allocated_msg 
+    call _print_zero_terminated_string
+    mov rax, [allocated]
+    call _print_unsigned_int
+    mov rsi, newline
+    call _print_zero_terminated_string
     mov r8, 256
     sub r8, rdx
     mov rdx, r8
@@ -55,9 +63,6 @@ _print_memory_stats:
     pop rax
     pop r8
     ret
-    
-    
-    
 
 global _init_heap
 _init_heap:
@@ -71,6 +76,7 @@ _init_heap:
     mov [heap], rax
     mov [next], rax
     mov qword [remaining], HEAP_SIZE
+    mov qword [allocated], 0
     ret
 
 ; input:
@@ -106,6 +112,7 @@ _malloc:
 .new_head:
     mov [free_list], r11
 .finish_reuse:
+    mov r8, [r9+8]    ; change the amount requested to actual size of the chunk
     lea rax, [r9+16]  ; return the address of the usable memory of the chunk
     jmp .done
 .new_allocation:
@@ -124,6 +131,7 @@ _malloc:
     mov [rax+8], r8      ; second qword is the amount of memory in this chunk
     add rax, 16          ; actual usable memory starts after first two qwords
 .done:
+    add [allocated], r8
     pop r11
     pop r10
     pop r9
@@ -144,11 +152,15 @@ _malloc:
 global _free
 _free:
     push r8
+    push r9
     ; push the chunk of memory to the front of the free list
     mov r8, [free_list]     ; pointer to head of current free list
     sub rax, 16             ; free list pointer is 2 qwords before the pointer that _malloc hands out
+    mov r9, [rax+8]         ; subtract size of the freed chunk from the total allocated amount
+    sub [allocated], r9
     mov [rax], r8           ; point this chunk at the head of current free list
     mov [free_list], rax    ; this chunk is now the new head of free list
+    pop r9
     pop r8
     ret
 
