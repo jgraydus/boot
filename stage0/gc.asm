@@ -1,12 +1,15 @@
 %include "constants.inc"
 %include "memory.inc"
 %include "object.inc"
+%include "stack.inc"
 %include "string.inc"
 %include "vec.inc"
 
 section .bss
+    gc_root_object: resq 1
     gc_registry: resq 1
-    gc_root_list: resq 1
+    gc_eval_frames: resq 1
+    gc_eval_frames_rsp: resq 1
 
 section .text
 
@@ -14,10 +17,61 @@ section .text
 global _gc_init
 _gc_init:
     push rax
+    ; gc_registry holds pointers to all objects
     mov qword rax, 1024
     call _vec_new 
     mov [gc_registry], rax
+    ; gc_eval_frames
+    call _stack_new
+    mov [gc_eval_frames], rax
+    ; gc_eval_frames_rsp
+    call _stack_new
+    mov [gc_eval_frames_rsp], rax
     pop rax
+    ret
+
+; input
+;   rax - address of root object
+global _gc_set_root_object
+_gc_set_root_object:
+    mov [gc_root_object], rax
+    ret
+
+; input:
+;   rax - the value of the stack pointer to associate with this eval frame
+global _gc_new_eval_frame
+_gc_new_eval_frame:
+    push rsi
+    mov rsi, rax
+    mov rax, [gc_eval_frames_rsp]
+    call _stack_push
+    mov rax, 4
+    call _vec_new
+    mov rsi, rax
+    mov rax, [gc_eval_frames]
+    call _stack_push
+    pop rsi
+    ret
+
+; input
+;   rax - the value of the stack pointer to unwind to
+global _gc_pop_eval_frame
+_gc_pop_eval_frame:
+    push r8
+    mov r8, rax
+    ; because a continuation can jump up the stack, we
+    ; need to keep popping frames until we've popped
+    ; the frame for the currently ending eval
+.loop:
+    mov rax, [gc_eval_frames]
+    call _stack_pop
+    call _vec_free
+    mov rax, [gc_eval_frames_rsp]
+    call _stack_pop
+    cmp rax, r8
+    jne .loop
+.done:
+    pop r8
     ret
 
 ; input:
@@ -26,13 +80,20 @@ _gc_init:
 ;   rax - address of object (unchanged)
 global _gc_register_obj
 _gc_register_obj:
-    push rax
     push rsi
     mov rsi, rax
+    ; add the object to the vec of all objects
     mov rax, [gc_registry]
     call _vec_append
+    ; also add the object to the current eval frame
+    mov rax, [gc_eval_frames]
+    call _stack_peek
+    cmp rax, 0         ; might not have a frame yet
+    je .done
+    call _vec_append
+.done:
+    mov rax, rsi
     pop rsi
-    pop rax
     ret
 
 ; set the gc mark flag on all objects
@@ -192,18 +253,29 @@ _gc_free_obj:
     pop r8
     ret
 
+_gc_mark_frame:
+    push rax
+    push rsi
+    mov rsi, _gc_unmark
+    call _vec_for_each
+    pop rsi
+    pop rax
+    ret
+
 ; input:
 ;   rax - address of root object. all live objects should be reachable from this object
 global _gc_run
 _gc_run:
-    push r8
-    mov r8, rax
     call _gc_mark
-    mov rax, r8
+    ; unmark objects reachable from root object
+    mov rax, [gc_root_object]
     call _gc_unmark
-    mov rax, r8
+    ; unmark objects reachable from eval frames as well
+    mov rax, [gc_eval_frames]
+    mov rsi, _gc_mark_frame
+    call _stack_for_each
+    ; collect unreachable objects
     call _gc_reclaim
-    pop r8
     ret
 
 

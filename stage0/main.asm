@@ -80,7 +80,6 @@ _start:
     ; top of stack now points at array of arguments (char**)
     mov [args], rsp
 
-
     ; these registers should be preserved
     push r12
     push r13
@@ -92,6 +91,7 @@ _start:
 
     call _make_environment
     mov r13, rax
+    call _gc_set_root_object
 
     call _read
     call _tokenize

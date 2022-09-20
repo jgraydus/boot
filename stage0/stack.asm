@@ -2,30 +2,15 @@
 %include "vec.inc"
 
 ; stack
-;
-; struct {
-;    ptr,      ; vec
-;    qword,    ; size
-; }
 
-%define stack_vec_offset      0
-%define stack_size_offset     8
-%define SIZEOF_STACK          16
 %define STACK_VEC_SIZE        16
 
 ; output:
 ;   rax - address of stack
-global _new_stack
-_new_stack:
-    push rbx
+global _stack_new
+_stack_new:
     mov rax, STACK_VEC_SIZE
     call _vec_new
-    mov rbx, rax
-    mov rax, SIZEOF_STACK
-    call _malloc
-    mov [rax], rbx   ; vec
-    mov qword [rax+stack_size_offset], 0   ; size
-    pop rbx
     ret
 
 ; input:
@@ -34,7 +19,7 @@ _new_stack:
 ;   rax - number of items in the stack
 global _stack_size
 _stack_size:
-    mov rax, [rax+stack_size_offset]
+    call _vec_length
     ret
 
 ; input:
@@ -44,15 +29,7 @@ _stack_size:
 ;   rax - address of stack (unchanged)
 global _stack_push
 _stack_push:
-    push rbx
-    mov rbx, rax
-    mov rax, [rbx+stack_vec_offset]    ; vec
     call _vec_append
-    mov rax, [rbx+stack_size_offset]    ; increment the size
-    inc rax
-    mov [rbx+stack_size_offset], rax
-    mov rax, rbx
-    pop rbx
     ret
 
 ; input:
@@ -61,36 +38,54 @@ _stack_push:
 ;   rax - most recent item pushed to stack (or 0 if stack is empty)
 global _stack_pop
 _stack_pop:
-    push rbx
-    mov rbx, rax
-    mov rax, [rbx+stack_size_offset]
+    push r8
+    push rsi
+    mov r8, rax
+    call _vec_length    ; compute index of last item
     cmp rax, 0
     je .done
-    dec rax            ; decrement count
-    mov [rbx+stack_size_offset], rax
-    mov rsi, rax       ; index of last item
-    mov rax, [rbx+stack_vec_offset]   ; vec
-    call _vec_get_value_at
+    dec rax
+    mov rsi, rax
+    mov rax, r8
+    call _vec_remove
 .done:
-    pop rbx
+    pop rsi
+    pop r8
+    ret
+
+; input:
+;   rax - address of stack
+; output:
+;   rax - most recent item pushed to stack (or 0 if stack is empty)
+global _stack_peek
+_stack_peek:
+    push r8
+    push rsi
+    mov r8, rax
+    call _vec_length
+    cmp rax, 0
+    je .done
+    dec rax
+    mov rsi, rax
+    mov rax, r8
+    call _vec_get_value_at
+.done
+    pop rsi
+    pop r8
     ret
 
 ; input:
 ;   rax - address of stack
 global _stack_free
 _stack_free:
-    push r8
-    mov r8, rax
-    mov rax, [r8+stack_vec_offset]
     call _vec_free
-    mov rax, r8
-    call _free
-    pop r8     
     ret
 
-
-
-
-
-
+; input
+;   rax - address of stack
+;   rsi - address of function to call for each element of vec (passed in rax)
+global _stack_for_each
+_stack_for_each:
+    call _vec_for_each
+    ret
 

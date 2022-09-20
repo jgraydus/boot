@@ -1,5 +1,19 @@
 %include "constants.inc"
 %include "memory.inc"
+%include "print.inc"
+%include "sys_calls.inc"
+
+section .rodata
+    error_1_msg: db "ERROR: vec buffer address is null", 10
+    error_1_msg_len: equ $-error_1_msg
+
+section .text
+
+_handle_vec_error:
+    mov rsi, error_1_msg
+    mov rdx, error_1_msg_len
+    call _flush_print_buffer
+    call _sys_exit
 
 ; struct vec
 ;
@@ -9,7 +23,9 @@
 ;    ptr,        ; address of buffer
 ; }
 
-%define vec_buffer_offset      16
+%define vec_buffer_size_offset    0
+%define vec_contents_size_offset  8
+%define vec_buffer_offset        16
 
 %define SIZEOF_VEC 24
 
@@ -26,16 +42,20 @@ _vec_new:
     mov rax, r8
     shl rax, 3               ; multiply by 8 (size of qword)
     call _malloc
+    cmp rax, 0
+    je .error
     mov r9, rax
     ; allocate vec
     mov rax, SIZEOF_VEC
     call _malloc
-    mov [rax+0], r8         ; buffer size
-    mov qword [rax+8], 0    ; contents size (empty)
-    mov [rax+vec_buffer_offset], r9        ; buffer address
+    mov [rax+vec_buffer_size_offset], r8         ; buffer size
+    mov qword [rax+vec_contents_size_offset], 0  ; contents size (empty)
+    mov [rax+vec_buffer_offset], r9              ; buffer address
     pop r9
     pop r8
     ret
+.error:
+    call _handle_vec_error
 
 ; input:
 ;   rax - address of vec
@@ -53,6 +73,8 @@ _vec_resize_buffer:
     mov [rbx+0], rax
     shl rax, 3           ; multiply by 8 (size of qword)
     call _malloc
+    cmp rax, 0
+    je .error
     ; copy into new buffer
     mov r8, [rbx+vec_buffer_offset]     ; old buffer address
     mov r9, rax          ; new buffer address
@@ -69,9 +91,9 @@ _vec_resize_buffer:
     dec r10
     jmp .next
 .done:
-    pop rax        ; free the old buffer memory
+    pop rax        ; free the old buffer memory (r8)
     call _free
-    pop rax        ; update the vec to point at new buffer
+    pop rax        ; update the vec to point at new buffer (r9)
     mov [rbx+vec_buffer_offset], rax
     mov rax, rbx
     pop rbx
@@ -79,6 +101,8 @@ _vec_resize_buffer:
     pop r9
     pop r8
     ret
+.error:
+    call _handle_vec_error
 
 ; input:
 ;   rax - address of vec
@@ -184,13 +208,43 @@ _vec_free:
     push r8
     mov r8, rax
     mov rax, [rax+vec_buffer_offset]
+    cmp rax, 0
+    je .error
     call _free
     mov rax, r8
     call _free
     pop r8 
     ret
+.error:
+    call _handle_vec_error
 
-     
-
-    
+; input
+;   rax - address of vec
+;   rsi - address of function to call for each element of vec (passed in rax)
+global _vec_for_each
+_vec_for_each:
+    push r8
+    push r9
+    push r10
+    push r11
+    mov r8, rax
+    mov r9, rsi
+    call _vec_length
+    mov r11, rax
+    mov r10, 0
+.loop:
+    cmp r10, r11
+    je .done
+    mov rax, r8
+    mov rsi, r10
+    call _vec_get_value_at
+    call r9
+    inc r10
+    jmp .loop
+.done
+    pop r11
+    pop r10
+    pop r9
+    pop r8
+    ret
 

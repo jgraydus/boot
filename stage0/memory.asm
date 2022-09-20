@@ -1,4 +1,5 @@
 %include "constants.inc"
+%include "gc.inc"
 %include "print.inc"
 %include "sys_calls.inc"
 
@@ -119,7 +120,8 @@ _malloc:
     ; allocate 2 additional qwords to hold free list pointer and size
     add rax, 16
     cmp rax, [remaining]
-    jg .handle_oom
+    jg .run_gc
+.new_allocation_cont:
     mov rbx, [remaining]
     sub rbx, rax
     mov [remaining], rbx
@@ -138,6 +140,13 @@ _malloc:
     pop r8
     pop rbx
     ret
+.run_gc:
+    push rax
+    call _gc_run
+    pop rax
+    cmp rax, [remaining]
+    jg .handle_oom
+    jmp .new_allocation_cont
 .handle_oom:
     mov rsi, oom
     mov rdx, [omm_len]

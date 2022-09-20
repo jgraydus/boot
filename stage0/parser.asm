@@ -123,7 +123,7 @@ _parse_next:
 .list:
     cmp rax, TOKEN_LEFT_PAREN
     jne .error
-    call _new_stack
+    call _stack_new
     mov r14, rax
 .list_next:
     ; check next token for right paren

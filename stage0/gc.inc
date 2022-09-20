@@ -1,4 +1,7 @@
 extern _gc_init
+extern _gc_set_root_object
 extern _gc_register_obj
 extern _gc_run
+extern _gc_new_eval_frame
+extern _gc_pop_eval_frame
 

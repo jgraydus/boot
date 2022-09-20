@@ -1,5 +1,6 @@
 %include "constants.inc"
 %include "env.inc"
+%include "gc.inc"
 %include "object.inc"
 %include "string.inc"
 %include "sys_calls.inc"
@@ -33,6 +34,10 @@ _eval:
     mov r8, rax    ; object
     mov r9, rsi    ; environment
     mov r13, rcx   ; quote flag
+    ; start new eval frame
+    mov rax, rsp
+    call _gc_new_eval_frame
+    ; evaluate the object
     ; null evaluates to null
     cmp r8, 0
     jne .go
@@ -354,6 +359,12 @@ _eval:
 .return_self:
     mov rax, r8
 .done:
+    ; remove gc eval frame
+    mov rcx, rax
+    mov rax, rsp
+    call _gc_pop_eval_frame
+    mov rax, rcx
+    ; now we can restore the registers
     pop r15
     pop r14
     pop r13
