@@ -1,6 +1,19 @@
+
+(define exit-with-message
+  (fn (msg)
+     (print msg)
+     (exit 1)))
+
+(define assert
+  (fn (x msg)
+      (if x x (exit-with-message msg))))
+
+
 (= 0 0)
 (= 1 2)
 (= "hello" "world")
 (= "hell" "hell")
 (= 42 (quote foo))
 
+(define foo (quote FOO))
+(assert (= foo foo) "symbol assigned to a variable is equal to itself")

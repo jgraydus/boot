@@ -395,7 +395,7 @@ _string_equals:
     mov r9, rcx
     ; if addresses are the same, it's the same object
     cmp rax, rcx
-    je .done
+    je .equal
     ; if lengths are different, they can't be equal 
     mov rax, [r8+content_length_offset]
     cmp rax, [r9+content_length_offset]

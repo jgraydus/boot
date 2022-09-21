@@ -124,6 +124,7 @@ _integer_get_value:
 ; }
 
 %define SIZEOF_SYMBOL_OBJ    24
+%define symbol_string_offset 16 
 
 ; input:
 ;   rax - address of string
@@ -137,14 +138,14 @@ _make_symbol_obj:
    call _malloc
    mov qword [rax+object_type_offset], TYPE_SYMBOL_OBJ
    mov qword [rax+object_flags_offset], 0
-   mov [rax+16], rcx
+   mov [rax+symbol_string_offset], rcx
    call _gc_register_obj
    pop rcx
    ret
 
 global _symbol_get_string
 _symbol_get_string:
-    mov rax, [rax+16]
+    mov rax, [rax+symbol_string_offset]
     ret
 
 section .rodata
@@ -163,7 +164,7 @@ section .text
     mov r8, [rax+0]
     cmp r8, TYPE_SYMBOL_OBJ
     jne .not
-    mov rax, [rax+16]
+    mov rax, [rax+symbol_string_offset]
     mov r8, %%str    ; buffer
     mov r9, %%len    ; length
     call _string_equals_buffer
