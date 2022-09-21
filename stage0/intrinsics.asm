@@ -260,6 +260,36 @@ _intrinsic_and:
     pop rcx
     ret
 
+_intrinsic_set_head:
+    push rcx
+    push r8
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_head
+    mov rcx, rax
+    mov rax, r8
+    call _get_pair_head
+    call _set_pair_head
+    mov rax, 0    ;result is nil
+    pop r8
+    pop rcx
+    ret
+
+_intrinsic_set_tail:
+    push rcx
+    push r8
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_head
+    mov rcx, rax
+    mov rax, r8
+    call _get_pair_head
+    call _set_pair_tail
+    mov rax, 0    ; result is nil
+    pop r8
+    pop rcx
+    ret
+
 _intrinsic_exit:
     push rdi
     mov rdi, 0
@@ -532,6 +562,8 @@ _add_intrinsics_to_env:
     add_binding "<", _intrinsic_less_than
     add_binding "*", _intrinsic_mult
     add_binding "/", _intrinsic_div
+    add_binding "set-head!", _intrinsic_set_head
+    add_binding "set-tail!", _intrinsic_set_tail
     add_binding "mod", _intrinsic_mod
     add_binding "exit", _intrinsic_exit
     add_binding "print", _intrinsic_print
