@@ -69,7 +69,7 @@ _stack_peek:
     mov rsi, rax
     mov rax, r8
     call _vec_get_value_at
-.done
+.done:
     pop rsi
     pop r8
     ret

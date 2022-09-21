@@ -241,7 +241,7 @@ _vec_for_each:
     call r9
     inc r10
     jmp .loop
-.done
+.done:
     pop r11
     pop r10
     pop r9
