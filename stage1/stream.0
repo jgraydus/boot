@@ -100,7 +100,24 @@
              (fn ()
                 (stream-cons
                    (stream-head s) (stream-take-while p (stream-tail s))))))))
-         
+
+(define stream-concat
+   (fn (s1 s2)
+      (list
+         (quote stream)
+         (fn ()
+            (if (stream-empty? s1) (stream-whnf s2)
+                (stream-cons (stream-head s1)
+                             (stream-concat (stream-tail s1) s2)))))))
+
+(define stream-from-list
+   (fn (xs)
+      (if (nil? xs) stream-empty
+          (list
+             (quote stream)
+             (fn ()
+                (stream-cons (head xs) (stream-from-list (tail xs))))))))
+
 (define stream-from-string
    (fn (str)
       (define len (string-length str))
@@ -116,7 +133,7 @@
    (fn (s)
       (if (stream-empty? s) nil
           (cons (stream-head s)
-                (stream-to-string (stream-tail s))))))
+                (stream-to-list (stream-tail s))))))
 
 ;; stream of the same value repeated forever
 ;(define stream-repeat
