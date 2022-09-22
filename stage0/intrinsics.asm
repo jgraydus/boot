@@ -390,8 +390,21 @@ _intrinsic_parse:
     ret
 
 _intrinsic_eval:
+    push rsi
+    push r8
+    mov r8, rax
+    ; optional second argument is the env
+    call _get_pair_tail
+    cmp rax, 0
+    je .ok
+    call _get_pair_head
+    mov rsi, rax
+.ok:
+    mov rax, r8
     call _get_pair_head
     call _eval_proc
+    pop r8
+    pop rsi
     ret
 
 _intrinsic_string_append:
