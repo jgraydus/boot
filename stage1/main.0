@@ -1,4 +1,4 @@
-(eval (parse (read-file "prelude.1")))
+(eval (parse (read-file "prelude.0")))
 
 (define repl (fn ()
    (define read (fn () (parse (read-line))))

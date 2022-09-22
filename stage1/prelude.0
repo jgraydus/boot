@@ -8,7 +8,6 @@
                      - a list returns a list consisting of the quote evaluation of each element
                      - every other type of object returns itself unevaluated
 ; define - adds a new binding to the current environment
-; set! - changes the value associated to a bound symbol in the environment
 ; if - if/then/else expression. only the condition and the chosen branch are evaluated
 ; loop - evaluates its arguments from left to right and then repeats forever
 ;
@@ -27,6 +26,12 @@
 ; gen-sym - create a guaranteed unique symbol
 ; string-append, string-length, substring
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define import
+   (fn (filepath)
+      (define p (parse (read-file filepath)))
+      ; evaluate in the parent environment
+      (eval p (head (env)))))
 
 ; transform into the application of a 0-arity function containing a 'define' for each binding
 (define let
@@ -152,7 +157,7 @@
       (if (> start end) () (cons start (range (+ start 1) end)))))
 
 (define char-at
-   (fn (n str) (substring str n (+ n 1))))
+   (fn (n str) (substring n (+ n 1) str)))
 
 (define starts-with?
    (fn (str src)
