@@ -176,3 +176,13 @@
                   (go (+ 1 start))))))
       (go 0)))
 
+(define exit-with-msg
+   (fn (msg code)
+      (print msg)
+      (print code)
+      (exit code)))
+
+(define assert
+   (fn (exp desc)
+      (if (not exp) (exit-with-msg desc 1) nil)))
+
