@@ -1,0 +1,142 @@
+; a stream is a lazily generated sequence. it can have three forms:
+;  - stream-empty is just a symbol that represents and empty stream
+;  - (stream-whnf <head> <tail>) where <head> is any value and <tail> is another stream object
+;  - (stream <fn>)  where fn is a function which produces a (stream-whnf <head> <tail>)
+
+(define stream-cons
+   (fn (h t) (list (quote stream-whnf) h t)))
+
+; convert a (stream <fn>) into a (stream-whnf <head> <tail>)
+; this mutates the given stream which ensures that the <fn>
+; is only invoked once
+(define stream-whnf
+   (fn (s)
+      (define is-whnf
+         (or (stream-empty? s)
+             (= (quote stream-whnf) (head s))))
+      (define force
+         (fn ()
+            (define x ((nth 1 s)))
+            (define update
+               (fn ()
+                  (set-head! s (quote stream-whnf))
+                  (set-tail! s (tail x))))
+            (if (stream-empty? x) nil (update))))
+      (if is-whnf nil (force))
+      s))
+
+(define stream-head
+   (fn (s)
+      (stream-whnf s)
+      (if (stream-empty? s) nil
+          (nth 1 s))))
+
+(define stream-tail
+   (fn (s)
+      (stream-whnf s)
+      (if (stream-empty? s) stream-empty
+          (nth 2 s))))
+
+(define stream-empty
+   (quote EMPTY-STREAM))
+
+(define stream-empty?
+   (fn (x) (= x stream-empty)))
+
+(define stream-map
+   (fn (f s)
+      (if (stream-empty? s) stream-empty
+          (list
+             (quote stream)
+             (fn ()
+                (stream-cons
+                   (f (stream-head s))
+                   (stream-map f (stream-tail s))))))))
+
+(define stream-filter
+   (fn (p s)
+      (if (stream-empty? s) stream-empty
+          (list
+             (quote stream)
+             (fn ()
+                (define h (stream-head s))
+                (define t (stream-tail s))
+                (define new-tail (stream-filter p t))
+                (if (p h) 
+                   (stream-cons h new-tail)
+                   (stream-whnf new-tail)))))))
+
+(define stream-drop
+   (fn (n s)
+      (if (or (= 0 n) (stream-empty? s)) s
+          (stream-drop (- n 1) (stream-tail s)))))
+
+(define stream-drop-while
+   (fn (p s)
+      (if (stream-empty? s) stream-empty
+      (if (p (stream-head s))
+          (stream-drop-while p (stream-tail s))
+          s))))
+
+;(define notz (fn (c) (not (= "z" c))))
+;(define abc (stream-from-string "abcdabcd"))
+
+(define stream-take
+   (fn (n s)
+      (if (or (= 0 n) (stream-empty? s)) stream-empty
+          (list
+             (quote stream)
+             (fn ()
+                (stream-cons
+                   (stream-head s)
+                   (stream-take (- n 1) (stream-tail s))))))))
+
+(define stream-take-while
+   (fn (p s)
+      (if (or (stream-empty? s) (not (p (stream-head s))))
+          stream-empty
+          (list
+             (quote stream)
+             (fn ()
+                (stream-cons
+                   (stream-head s) (stream-take-while p (stream-tail s))))))))
+         
+(define stream-from-string
+   (fn (str)
+      (define len (string-length str))
+      (define aux
+         (fn (n)
+            (if (= n len) stream-empty
+                (list
+                   (quote stream)
+                   (fn () (stream-cons (char-at n str) (aux (+ n 1))))))))
+      (aux 0)))
+
+(define stream-to-list
+   (fn (s)
+      (if (stream-empty? s) nil
+          (cons (stream-head s)
+                (stream-to-string (stream-tail s))))))
+
+;; stream of the same value repeated forever
+;(define stream-repeat
+;   (fn (x)
+;      (list (quote stream)
+;            (fn () (stream-cons x (stream-repeat x)))))) 
+;
+;; all of the natural numbers (0, 1, 2, 3, 4, ...)
+;(define nats
+;   ((fn ()
+;       (define next 0)
+;       (stream-map
+;          (fn () (define n next) (set! next (+ 1 next)) n)
+;          (stream-repeat nil)))))
+
+;(define foo (stream-cons 1 (stream-cons 2 (stream-cons 3 stream-empty))))
+;
+;(define +10 (fn (x) (+ 10 x)))
+;
+;(define even? (fn (n) (= 0 (mod n 2))))
+;
+;(define evens (stream-filter even? nats))
+
