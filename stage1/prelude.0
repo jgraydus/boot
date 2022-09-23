@@ -176,6 +176,14 @@
                   (go (+ 1 start))))))
       (go 0)))
 
+(define string-to-list
+  (fn (str)
+     (define len (string-length str))
+     (define go
+        (fn (n)
+           (if (= n len) nil (cons (char-at n str) (go (+ 1 n))))))
+     (go 0)))
+
 (define exit-with-msg
    (fn (msg code)
       (print msg)
