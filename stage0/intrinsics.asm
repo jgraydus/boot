@@ -322,7 +322,7 @@ _intrinsic_read_file:
     call _string_to_null_terminated
     mov r8, rax ; remember this string so we can free it
     mov rdi, rax
-    mov rsi, 0
+    mov rsi, O_RDONLY
     call _sys_open
     mov r9, rax
     ; read file

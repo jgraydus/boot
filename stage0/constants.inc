@@ -6,6 +6,14 @@ SYS_CLOSE       equ   3
 SYS_MMAP        equ   9
 SYS_EXIT        equ  60
 
+; flags for open sys call
+O_RDONLY        equ     0     ; read only
+O_WRONLY        equ     1     ; write only
+O_RDWR          equ     2     ; read and write
+O_CREAT         equ    64     ; create the file if it doesn't exist
+O_TRUNC         equ   512     ; truncate (delete existing contents)
+O_APPEND        equ  1024     ; append to existing file
+
 ; exit codes
 EXIT_SUCCESS    equ   0
 

@@ -33,7 +33,7 @@ _read:
     jne .stdin
     mov rdi, [args]    ; pointer to the array of args
     mov rdi, [rdi+8]   ; file should be second arg 
-    mov rsi, 0
+    mov rsi, O_RDONLY
     call _sys_open
 .stdin:
     call _read_string
