@@ -64,12 +64,21 @@ _sys_exit:
 ;   rax - file handle
 global _sys_open
 _sys_open:
+    push rdx
     push rcx
     push r11
+    mov rdx, 0
+    or rdx, S_IRUSR
+    or rdx, S_IWUSR
+    or rdx, S_IRGRP
+    or rdx, S_IWGRP
+    or rdx, S_IROTH
+    or rdx, S_IWOTH
     mov rax, SYS_OPEN
     syscall
     pop r11
     pop rcx
+    pop rdx
     ret
 
 ; input:

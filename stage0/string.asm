@@ -233,6 +233,15 @@ _string_length:
     ret
 
 ; input:
+;   rax - address of string
+; output:
+;   rax - address of the string's data buffer
+global _string_buffer
+_string_buffer:
+    mov rax, [rax+buffer_offset]
+    ret
+
+; input:
 ;   rax - address of string object
 ; output:
 ;   rax - address of a copy of the string as a null terminated buffer

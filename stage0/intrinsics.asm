@@ -342,6 +342,49 @@ _intrinsic_read_file:
     pop rdi
     ret
 
+; expects a list where first value is file name and second value is string to write to file
+_intrinsic_write_file:
+    push rdi
+    push rsi
+    push rdx
+    push r8
+    push r9
+    mov r8, rax
+    ; open file
+    call _get_pair_head
+    call _string_to_null_terminated
+    mov r9, rax ; remember this string so we can free it
+    mov rdi, rax
+    ;mov rsi, 0
+    mov rsi, O_WRONLY
+    add rsi, O_CREAT
+    add rsi, O_APPEND
+    call _sys_open
+    mov rdi, rax    ; file handle
+    ; free the temp file name string
+    mov rax, r9
+    call _free
+    ; write data (second argument)
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    mov r9, rax
+    call _string_buffer
+    mov rsi, rax    ; address of buffer
+    mov rax, r9
+    call _string_length
+    mov rdx, rax    ; number of bytes to write
+    call _sys_write
+    call _sys_close
+.done:
+    pop r9
+    pop r8
+    pop rdx
+    pop rsi
+    pop rdi
+    ret
+    
+
 %define READ_LINE_BUFFER_SIZE 1024
 section .bss
     read_line_buffer: resb READ_LINE_BUFFER_SIZE
@@ -582,6 +625,7 @@ _add_intrinsics_to_env:
     add_binding "print", _intrinsic_print
     add_binding "read-line", _intrinsic_read_line
     add_binding "read-file", _intrinsic_read_file
+    add_binding "write-file", _intrinsic_write_file
     add_binding "parse", _intrinsic_parse
     add_binding "eval", _intrinsic_eval
     add_binding "string-append", _intrinsic_string_append

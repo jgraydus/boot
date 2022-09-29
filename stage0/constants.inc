@@ -14,6 +14,20 @@ O_CREAT         equ    64     ; create the file if it doesn't exist
 O_TRUNC         equ   512     ; truncate (delete existing contents)
 O_APPEND        equ  1024     ; append to existing file
 
+; file modes
+S_IRWXU   equ   448  ; user (file owner) has read, write, and execute permission
+S_IRUSR   equ   256  ; user has read permission
+S_IWUSR   equ   128  ; user has write permission
+S_IXUSR   equ   64   ; user has execute permission
+S_IRWXG   equ   56   ; group has read, write, and execute permission
+S_IRGRP   equ   32   ; group has read permission
+S_IWGRP   equ   16   ; group has write permission
+S_IXGRP   equ   8    ; group has execute permission
+S_IRWXO   equ   7    ; others have read, write, and execute permission
+S_IROTH   equ   4    ; others have read permission
+S_IWOTH   equ   2    ; others have write permission
+S_IXOTH   equ   1    ; others have execute permission
+
 ; exit codes
 EXIT_SUCCESS    equ   0
 
