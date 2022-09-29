@@ -1,0 +1,426 @@
+; determine if the given character is the newline character
+(define newline? (fn (c) (= 10 (ord c))))
+
+; make a character stream
+(define cs-make
+   (fn (string coords)
+      (cons string coords)))
+
+; absolute position within string, as well as current line position and line number
+(define cs-coords-make
+   (fn (abs-pos line-pos line-num)
+      (list abs-pos line-pos line-num)))
+
+(define cs-coords-start (cs-coords-make 0 1 1))
+
+(define cs-coords-abs-pos  (fn (coords) (nth 0 coords)))
+(define cs-coords-line-pos (fn (coords) (nth 1 coords)))
+(define cs-coords-line-num (fn (coords) (nth 2 coords)))
+
+; create a character stream from a string
+(define cs-from-string
+   (fn (str)
+      (cs-make str cs-coords-start)))
+
+(define cs-string (fn (cs) (head cs)))
+(define cs-coords (fn (cs) (tail cs)))
+(define cs-abs-pos  (fn (cs) (cs-coords-abs-pos  (cs-coords cs))))
+(define cs-line-pos (fn (cs) (cs-coords-line-pos (cs-coords cs))))
+(define cs-line-num (fn (cs) (cs-coords-line-num (cs-coords cs))))
+
+; increment the line number and set the line position to 1
+(define cs-inc-line-num
+   (fn (cs)
+      (cs-make
+         (cs-string cs)
+         (cs-coords-make
+            (+ 1 (cs-abs-pos cs))
+            1
+            (+ 1 (cs-line-num cs))))))
+
+; increment the line position
+(define cs-inc-line-pos
+   (fn (cs)
+      (cs-make
+         (cs-string cs)
+         (cs-coords-make
+            (+ 1 (cs-abs-pos cs))
+            (+ 1 (cs-line-pos cs))
+            (cs-line-num cs)))))
+
+(define cs-next
+   (fn (cs)
+      (define s (cs-string cs))
+      (define len (string-length s))
+      (define n (cs-abs-pos cs))
+      (if (= n len) nil
+         ((fn ()
+             (define c (char-at n s))
+             (if (newline? c)
+                (list c (cs-inc-line-num cs))
+                (list c (cs-inc-line-pos cs))))))))
+
+(define cs-take-n
+   (fn (n cs)
+      (if (= n 0)
+         (list "" cs)
+         ((fn ()
+            (define next (cs-next cs))
+            (if (nil? next)
+               (list "" cs)
+               ((fn ()
+                   (define rest (cs-take-n (- n 1) (nth 1 next)))
+                   (define result (string-append (head next) (head rest)))
+                   (list result (nth 1 rest))))))))))
+
+(define success
+   (fn (value)
+      (fn (cs)
+         (list
+            (quote success)
+            value
+            cs))))
+
+(define success-value (fn (s) (nth 1 s)))
+(define success-cs    (fn (s) (nth 2 s)))
+
+(define success?
+   (fn (result)
+      (if (nil? result) #f
+          (= (quote success) (head result)))))
+
+(define failure
+   (fn () nil))
+
+(define parse-string
+  (fn (str)
+     (define n (string-length str))
+     (fn (cs)
+        (define tmp (cs-take-n n cs))
+        (define str' (head tmp))
+        (define cs' (nth 1 tmp))
+        (if (= str str')
+           ((success str) cs')
+           (failure)))))
+
+(define parse-bind
+   (fn (p fp)
+      (fn (cs)
+         (define result (p cs))
+         (if (success? result)
+            (fp (success-value result) (success-cs result))
+            (failure)))))
+
+(define parse-both
+   (fn (p1 p2)
+      (define p2'
+         (fn (v cs)
+            (define result (p2 cs))
+            (if (success? result)
+               ((success (list v (success-value result))) (success-cs result))
+               (failure))))
+      (parse-bind p1 p2')))
+
+(define parse-either
+   (fn (p1 p2)
+      (fn (cs)
+         (define result (p1 cs))
+         (if (success? result)
+             result
+             (p2 cs)))))
+
+(define parse-map
+   (fn (f parser)
+      (fn (cs)
+         (define result (parser cs))
+         (if (success? result)
+             ((success (f (success-value result))) (success-cs result))
+             (failure)))))
+
+(define parse-sequence
+   (fn (parsers)
+      (fn (cs)
+         (if (nil? parsers)
+             ((success nil) cs)
+             ((fn ()
+                 (define p1 (head parsers))
+                 (define p2 (parse-sequence (tail parsers)))
+                 (define p3 (parse-both p1 p2))
+                 (define f (fn (v) (cons (head v) (nth 1 v))))
+                 (define p4 (parse-map f p3))
+                 (p4 cs)))))))
+
+(define parse-one-of
+   (fn (parsers)
+      (fn (cs)
+         (if (nil? parsers)
+            (failure)
+            (let ((result ((head parsers) cs)))
+                (if (success? result)
+                   result
+                   ((parse-one-of (tail parsers)) cs)))))))
+
+(define snoc (fn (a b) (cons b a)))
+
+(define parse-many
+   (fn (parser)
+      (fn (cs)
+         (define cs' cs)
+         (define result nil)
+         (with-continue-from-here
+            (fn (continue)
+               (loop
+                  (define r (parser cs'))
+                  (if (success? r)
+                     ((fn ()
+                         (set! cs' (success-cs r))
+                         (set! result (cons (success-value r) result))))
+                     (continue)))))
+         ((success (reverse result)) cs'))))
+
+(define parse-at-least-one
+   (fn (parser)
+      (define f (fn (v) (cons (head v) (nth 1 v))))
+      (parse-map f (parse-both parser (parse-many parser)))))
+             
+(define parse-zero-or-one
+   (fn (parser)
+      (parse-either parser (success nil))))
+
+(define parse-space (parse-string " "))
+(define parse-newline (parse-string (chr 10)))
+(define parse-tab (parse-string (chr 9)))
+
+(define parse-whitespace
+   ((fn ()
+      (define f (const nil))
+      (define parsers (list parse-space parse-newline parse-tab))
+      (define ws (parse-one-of parsers))
+      (parse-map f ws))))
+
+(define parse-optional-whitespace
+   (parse-map (const nil)
+      (parse-many parse-whitespace)))
+
+(define parse-required-whitespace
+   (parse-map (const nil)
+      (parse-sequence
+         (list
+            parse-whitespace
+            parse-optional-whitespace))))
+
+(define parse-left-paren (parse-string (chr 40)))
+(define parse-right-paren (parse-string (chr 41)))
+
+(define parse-pred
+   (fn (pred)
+      (fn (cs)
+         (define next (cs-next cs))
+         (if (nil? next)
+            (failure)
+            ((fn ()
+                (define c (head next))
+                (if (pred c)
+                   ((success c) (nth 1 next))
+                   (failure))))))))
+
+(define parse-ascii-A-to-Z
+   ((fn ()
+       (define ascii-A (ord "A"))
+       (define ascii-Z (ord "Z"))
+       (parse-pred
+          (fn (c)
+             (define d (ord c))
+             (and (>= d ascii-A) (<= d ascii-Z)))))))
+
+(define parse-ascii-a-to-z
+   ((fn ()
+       (define ascii-a (ord "a"))
+       (define ascii-z (ord "z"))
+       (parse-pred
+          (fn (c)
+             (define d (ord c))
+             (and (>= d ascii-a) (<= d ascii-z)))))))
+
+(define parse-alpha
+   (parse-either parse-ascii-A-to-Z parse-ascii-a-to-z))
+
+(define parse-ascii-digit
+   ((fn ()
+       (define ascii-0 (ord "0"))
+       (define ascii-9 (ord "9"))
+       (parse-pred
+          (fn (c)
+             (define d (ord c))
+             (and (>= d ascii-0) (<= d ascii-9)))))))
+
+(define parse-ascii-non-zero-digit
+   (fn (cs)
+      (define result (parse-ascii-digit cs))
+      (if (and (success? result) (not (= "0" (success-value result))))
+          result
+          (failure))))
+
+(define parse-alphanum
+   (parse-either parse-alpha parse-ascii-digit))
+
+(define parse-double-quotes (parse-string (chr 34)))
+
+(define any (fn (xs) (reduce or #f xs)))
+(define all (fn (xs) (reduce and #t xs)))
+
+(define is-one-of
+   (fn (xs)
+      (define go
+         (fn (y ys)
+            (if (nil? ys) #f (or (= y (head ys)) (go y (tail ys))))))
+      (fn (x) (go x xs))))
+
+(define parse-id-symbol
+   ((fn ()
+       (define id-symbols
+           (list "!" "@" "#" "$" "%" "^" "&" "*" "<" ">" "+" "-" "_" "=" "." "?" ":"))
+       (parse-pred (is-one-of id-symbols)))))
+
+(define keywords
+   (list "&" "define" "fn"))
+
+(define list-to-string
+   (fn (str) (reduce string-append "" str)))
+
+(define parse-identifier
+   ((fn ()
+       (define parse-first-char (parse-either parse-alpha parse-id-symbol))
+       (define parse-other-chars (parse-either parse-alphanum parse-id-symbol))
+       (define parser
+          (parse-map list-to-string
+             (parse-sequence
+                (list
+                   parse-first-char
+                   (parse-map list-to-string (parse-many parse-other-chars))))))
+       (define not-keyword?
+          (fn (v) (not ((is-one-of keywords) v))))
+       (fn (cs)
+          (define result (parser cs))
+          (if (and (success? result) (not-keyword? (success-value result)))
+              result
+              (failure))))))
+
+(define parse-identifier-exp
+   (parse-map (fn (v) (list (quote id-exp) v)) parse-identifier))
+
+(define char-string-to-int
+   (fn (chars)
+      (define char-to-digit
+         (fn (x) (- (ord x) (ord "0"))))
+      (reduce
+         (fn (acc next)
+            (+ (char-to-digit next)
+               (* 10 acc)))
+         0
+         chars)))
+
+(define parse-integer-exp
+   (parse-map (fn (v) (list (quote integer-exp) v))
+      (parse-map char-string-to-int
+         (parse-map (fn (v) (cons (head v) (nth 1 v)))
+            (parse-sequence
+               (list
+                  parse-ascii-non-zero-digit
+                  (parse-many parse-ascii-digit)))))))
+
+(define parse-define-exp
+   (parse-map (fn (v) (list (quote define-exp) (nth 4 v) (nth 6 v)))
+   (parse-sequence
+      (list
+         parse-left-paren
+         parse-optional-whitespace
+         (parse-string "define")
+         parse-required-whitespace
+         parse-identifier
+         parse-optional-whitespace
+         (fn (cs) (parse-exp cs)) ; delay parse-exp because not defined yet
+))))
+
+(define parse-param-list
+   ((fn ()
+      (define parse-params
+         (parse-many
+            (parse-map head
+               (parse-sequence
+                  (list
+                     parse-identifier
+                     parse-optional-whitespace)))))
+      (define parse-rest
+         (parse-map
+            (fn (v) (if (nil? v) nil (nth 2 v)))
+            (parse-zero-or-one
+               (parse-sequence
+                  (list
+                     (parse-string "&")
+                     parse-required-whitespace
+                     parse-identifier)))))
+      (define f (fn (x) (list (quote formal-params) (nth 2 x) (nth 3 x))))
+      (parse-map f
+         (parse-sequence
+            (list
+               parse-left-paren
+               parse-optional-whitespace
+               parse-params
+               parse-rest
+               parse-right-paren))))))
+
+(define parse-body
+   (parse-string "body")) ; TODO
+
+(define parse-fn-exp
+   (parse-map
+      (fn (v)
+         (list
+            (quote fn-exp)
+            (nth 4 v)       ; formal params
+            (nth 6 v)))     ; body
+      (parse-sequence
+         (list
+            parse-left-paren
+            parse-optional-whitespace
+            (parse-string "fn")
+            parse-required-whitespace
+            parse-param-list
+            parse-optional-whitespace
+            parse-body))))
+
+(define double-quote (chr 34))
+(define parse-double-quote (parse-string double-quote))
+
+(define parse-string-exp
+   (parse-map (fn (v) (list (quote string-exp) (nth 1 v)))
+      (parse-sequence
+         (list
+            parse-double-quote
+            (parse-map list-to-string
+               (parse-many
+                  (parse-pred (fn (c) (not (= double-quote c))))))
+            parse-double-quote))))
+
+(define parse-exp
+   (parse-one-of
+      (list
+         parse-integer-exp
+         parse-identifier-exp
+         parse-string-exp
+         parse-define-exp
+         parse-fn-exp)))
+
+
+
+
+
+
+
+
+
+
+
+
+
