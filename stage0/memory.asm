@@ -91,7 +91,10 @@ _malloc:
     push r9
     push r10
     push r11
+    push r12
     mov r8, rax
+    mov r12, rax   ; largest chunk of memory we will reuse for this allocation
+    add r12, 8
     ; first check free list for a chunk of sufficient size
     mov r9, [free_list]
     mov r10, 0           ; previous chunk in list
@@ -100,7 +103,10 @@ _malloc:
     je .new_allocation   ; no chunk in free list large enough
     mov r11, [r9+8]      ; get size of this chunk
     cmp r11, r8       ; is it large enough?
-    jge .reuse        ; strategy: use first chunk that is large enough. simple but wastes memory
+    jl .advance
+    cmp r11, r12
+    jle .reuse
+.advance:
     mov r10, r9
     mov r9, [r9+0]    ; go to next chunk in free list
     jmp .next
@@ -134,6 +140,7 @@ _malloc:
     add rax, 16          ; actual usable memory starts after first two qwords
 .done:
     add [allocated], r8
+    pop r12
     pop r11
     pop r10
     pop r9
