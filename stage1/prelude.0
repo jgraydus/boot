@@ -156,6 +156,53 @@
    (fn (start end)
       (if (> start end) () (cons start (range (+ start 1) end)))))
 
+(define string-to-list
+  (fn (str)
+     (define len (string-length str))
+     (define go
+        (fn (n)
+           (if (= n len) nil (cons (char-at n str) (go (+ 1 n))))))
+     (go 0)))
+
+(define join
+   (fn (strs)
+      (reduce
+         (fn (acc next) (string-append acc next))
+         ""
+         strs)))
+
+(define to-lower-case
+   ((fn ()
+      (define A (ord "A"))
+      (define Z (ord "Z"))
+      (define cond
+         (fn (c)
+            (define c' (ord c))
+            (and (>= c' A) (<= c' Z))))
+      (define mk-lower
+         (fn (c) (if (cond c) (chr (+ (ord c) 32)) c)))
+      (fn (str)
+         (join
+            (map
+               mk-lower
+               (string-to-list str)))))))
+
+(define to-upper-case
+   ((fn ()
+      (define a (ord "a"))
+      (define z (ord "z"))
+      (define cond
+         (fn (c)
+            (define c' (ord c))
+            (and (>= c' a) (<= c' z))))
+      (define mk-upper
+         (fn (c) (if (cond c) (chr (- (ord c) 32)) c)))
+      (fn (str)
+         (join
+            (map
+               mk-upper
+               (string-to-list str)))))))
+
 (define char-at
    (fn (n str) (substring n (+ n 1) str)))
 
@@ -175,14 +222,6 @@
               (if (starts-with? str (substring start (+ start n) src)) start
                   (go (+ 1 start))))))
       (go 0)))
-
-(define string-to-list
-  (fn (str)
-     (define len (string-length str))
-     (define go
-        (fn (n)
-           (if (= n len) nil (cons (char-at n str) (go (+ 1 n))))))
-     (go 0)))
 
 (define exit-with-msg
    (fn (msg code)
