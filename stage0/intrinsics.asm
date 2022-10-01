@@ -450,6 +450,11 @@ _intrinsic_eval:
     pop rsi
     ret
 
+_intrinsic_to_string:
+    call _get_pair_head
+    call _object_to_string
+    ret
+
 _intrinsic_string_append:
     push r8
     push r9
@@ -628,6 +633,7 @@ _add_intrinsics_to_env:
     add_binding "write-file", _intrinsic_write_file
     add_binding "parse", _intrinsic_parse
     add_binding "eval", _intrinsic_eval
+    add_binding "to-string", _intrinsic_to_string
     add_binding "string-append", _intrinsic_string_append
     add_binding "string-length", _intrinsic_string_length
     add_binding "substring", _intrinsic_substring
