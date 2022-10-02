@@ -168,15 +168,13 @@ _malloc:
 global _free
 _free:
     push r8
-    push r9
     ; push the chunk of memory to the front of the free list
-    mov r8, [free_list]     ; pointer to head of current free list
     sub rax, 16             ; free list pointer is 2 qwords before the pointer that _malloc hands out
-    mov r9, [rax+8]         ; subtract size of the freed chunk from the total allocated amount
-    sub [allocated], r9
+    mov r8, [rax+8]         ; subtract size of the freed chunk from the total allocated amount
+    sub [allocated], r8
+    mov r8, [free_list]     ; pointer to head of current free list
     mov [rax], r8           ; point this chunk at the head of current free list
     mov [free_list], rax    ; this chunk is now the new head of free list
-    pop r9
     pop r8
     ret
 
