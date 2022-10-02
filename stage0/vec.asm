@@ -39,7 +39,6 @@ _vec_new:
     push r9
     ; allocate buffer
     mov r8, rax
-    mov rax, r8
     shl rax, 3               ; multiply by 8 (size of qword)
     call _malloc
     cmp rax, 0
@@ -78,7 +77,7 @@ _vec_resize_buffer:
     ; copy into new buffer
     mov r8, [rbx+vec_buffer_offset]     ; old buffer address
     mov r9, rax          ; new buffer address
-    mov r10, [rbx+8]     ; number of items to copy
+    mov r10, [rbx+vec_contents_size_offset]     ; number of items to copy
     push r9
     push r8
 .next:
@@ -146,7 +145,7 @@ _vec_remove:
     mov r10, rax  ; removed value
     ; move item in last position to this position
     mov rax, r8
-    mov rsi, [rax+8]   ; contents size
+    mov rsi, [rax+vec_contents_size_offset]   ; contents size
     sub rsi, 1         ; index of last item
     call _vec_get_value_at
     mov rdi, rax
@@ -154,9 +153,9 @@ _vec_remove:
     mov rsi, r9
     call _vec_set_value_at
     ; decrement size
-    mov rax, [r8+8]
+    mov rax, [r8+vec_contents_size_offset]
     dec rax
-    mov [r8+8], rax
+    mov [r8+vec_contents_size_offset], rax
     ; done
     mov rax, r10
     pop r10
@@ -195,10 +194,10 @@ _vec_set_value_at:
 ;   rax - length of address
 global _vec_length
 _vec_length:
-    push rbx
-    mov rbx, rax
-    mov rax, [rbx+8]
-    pop rbx
+    push r8
+    mov r8, rax
+    mov rax, [r8+vec_contents_size_offset]
+    pop r8
     ret
 
 ; input:
