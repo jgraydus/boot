@@ -10,8 +10,7 @@
 global _stack_new
 _stack_new:
     mov rax, STACK_VEC_SIZE
-    call _vec_new
-    ret
+    jmp _vec_new
 
 ; input:
 ;   rax - address of stack
@@ -19,8 +18,7 @@ _stack_new:
 ;   rax - number of items in the stack
 global _stack_size
 _stack_size:
-    call _vec_length
-    ret
+    jmp _vec_length
 
 ; input:
 ;   rax - address of stack
@@ -29,8 +27,7 @@ _stack_size:
 ;   rax - address of stack (unchanged)
 global _stack_push
 _stack_push:
-    call _vec_append
-    ret
+    jmp _vec_append
 
 ; input:
 ;   rax - address of stack
@@ -78,14 +75,12 @@ _stack_peek:
 ;   rax - address of stack
 global _stack_free
 _stack_free:
-    call _vec_free
-    ret
+    jmp _vec_free
 
 ; input
 ;   rax - address of stack
 ;   rsi - address of function to call for each element of vec (passed in rax)
 global _stack_for_each
 _stack_for_each:
-    call _vec_for_each
-    ret
+    jmp _vec_for_each
 
