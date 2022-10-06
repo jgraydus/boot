@@ -1,5 +1,5 @@
 ; a stream is a lazily generated sequence. it can have three forms:
-;  - stream-empty is just a symbol that represents and empty stream
+;  - stream-empty is just a symbol that represents an empty stream
 ;  - (stream-whnf <head> <tail>) where <head> is any value and <tail> is another stream object
 ;  - (stream <fn>)  where fn is a function which produces a (stream-whnf <head> <tail>)
 
