@@ -217,6 +217,21 @@ _intrinsic_is_nil:
 .done:
     ret
 
+_intrinsic_is_cons:
+    call _get_pair_head
+    cmp rax, 0 ; check for nil
+    je .false
+    call _obj_type
+    cmp rax, TYPE_PAIR_OBJ
+    je .true
+.false:
+    call _symbol_false
+.done:
+    ret
+.true:
+    call _symbol_true
+    jmp .done
+
 _intrinsic_bool:
     call _get_pair_head
     call _to_bool
@@ -358,7 +373,7 @@ _intrinsic_write_file:
     ;mov rsi, 0
     mov rsi, O_WRONLY
     add rsi, O_CREAT
-    add rsi, O_APPEND
+    add rsi, O_TRUNC
     call _sys_open
     mov rdi, rax    ; file handle
     ; free the temp file name string
@@ -616,6 +631,7 @@ _add_intrinsics_to_env:
     add_binding "head", _intrinsic_head
     add_binding "tail", _intrinsic_tail
     add_binding "nil?", _intrinsic_is_nil
+    add_binding "cons?", _intrinsic_is_cons
     add_binding "bool", _intrinsic_bool
     add_binding "and", _intrinsic_and
     add_binding "=", _intrinsic_equals
