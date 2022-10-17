@@ -322,7 +322,21 @@
    (set! s (cs-from-string "(fn () body)"))
    (set! r (parse-exp s))
    (assert (success? r) "0-arity fn")
-   (assert (= (list (quote fn-exp) (list (quote formal-params) () ()) "body") (success-value r)) "0-arity fn value")
+   (define expected (quote (fn-exp (formal-params () ()) ((id-exp "body")))))
+   (assert (= expected (success-value r)) "0-arity fn value")
+
+   (set! s (cs-from-string "(fn () 1 (define x 42) 3 (define y 42) 4)"))
+   (set! r (parse-exp s))
+   (assert (success? r) "parse-exp fn-exp")
+   (define expected (quote
+      (fn-exp
+         (formal-params () ())
+         ((integer-exp 1)
+          (define-exp "x" (integer-exp 42))
+          (integer-exp 3)
+          (define-exp "y" (integer-exp 42))
+          (integer-exp 4)))))
+   (assert (= expected (success-value r)) "parse-fn-exp: multiple expressions in body")
 ))
 
 

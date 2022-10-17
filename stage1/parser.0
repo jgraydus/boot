@@ -340,6 +340,7 @@
          parse-identifier
          parse-optional-whitespace
          (fn (cs) (parse-exp cs)) ; delay parse-exp because not defined yet
+         parse-right-paren
 ))))
 
 (define parse-param-list
@@ -371,7 +372,12 @@
                parse-right-paren))))))
 
 (define parse-body
-   (parse-string "body")) ; TODO
+   (fn (cs)
+      (define p
+         (parse-map
+            (fn (q) (head q))
+            (parse-sequence (list parse-exp parse-optional-whitespace))))
+      ((parse-many p) cs)))
 
 (define parse-fn-exp
    (parse-map
@@ -388,7 +394,8 @@
             parse-required-whitespace
             parse-param-list
             parse-optional-whitespace
-            parse-body))))
+            parse-body
+            parse-right-paren))))
 
 (define double-quote (chr 34))
 (define parse-double-quote (parse-string double-quote))
