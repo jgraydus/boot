@@ -1,0 +1,23 @@
+(define rt-asm ((fn ()
+
+(import "rt_gc.0")
+(import "rt_memory.0")
+(import "rt_print.0")
+(import "rt_syscalls.0")
+(import "rt_vec.0")
+(import "rt_object.0")
+
+(join
+   (list 
+      rt-sys-calls-asm
+      rt-print-asm
+      rt-memory-asm
+      rt-vec-asm
+      rt-gc-asm
+      rt-object-asm))
+)))
+
+(define write-asm
+   (fn ()
+      (write-file "foo.asm" rt-asm)))
+

@@ -1,0 +1,309 @@
+(define rt-object-asm ((fn ()
+
+(define TYPE_PAIR_OBJ      1)
+(define TYPE_STRING_OBJ    2)
+(define TYPE_INTEGER_OBJ   3)
+(define TYPE_SYMBOL_OBJ    4)
+(define TYPE_PROCEDURE_OBJ 5)
+
+(define newline (chr 10))
+(define dbl-quote (chr 34))
+
+(define rodata-asm
+   (join
+      (list
+         "section .rodata"                                 newline
+         "    left_paren:  db " dbl-quote "(" dbl-quote    newline
+         "    right_paren: db " dbl-quote ")" dbl-quote    newline
+         newline)))
+
+(define map-with-index
+   (fn (f xs)
+      (define xs-with-index (zip (range 0 (length xs)) xs))
+      (define f' (fn (x) (f (head x) (head (tail x)))))
+      (map f' xs-with-index)))
+
+(define make-getter
+   (fn (object-name)
+      (fn (idx property-name)
+         (define offset (to-string (* (+ 1 idx) 8)))
+         (join
+            (list
+               "_rt_" object-name "_" property-name "_get:" newline
+               "    mov rax, [rax+" offset "]"              newline
+               "    ret"                                    newline
+               newline)))))
+
+(define make-setter
+   (fn (object-name)
+      (fn (idx property-name)
+         (define offset (to-string (* (+ 1 idx) 8)))
+         (join
+            (list
+               "_rt_" object-name "_" property-name "_set:" newline
+               "    mov [rax+" offset "], rbx"              newline
+               "    ret"                                    newline
+               newline)))))
+
+(define make-constructor
+   (fn (name size type flags)
+      (define header (join (list (to-string flags) " | " (to-string type))))
+      (join
+         (list
+            "_rt_" name "_new:"                       newline
+            "    mov rax, " (to-string size)          newline
+            "    call _rt_malloc"                     newline
+            "    mov qword [rax], " header            newline
+            "    ret"                                 newline
+            newline))))
+
+(define make-predicate
+   (fn (name type)
+      (define t (to-string type))
+      (join
+         (list
+            "_rt_is_" name "_predicate:"              newline
+            "    cmp rax, 0"                          newline ; check for null
+            "    je .done"                            newline
+            "    mov rax, [rax]"                      newline ; load the object header
+            "    and rax, " t                         newline ; check type
+            "    cmp rax, " t                         newline
+            "    jne .false"                          newline
+            "    mov rax, 1"                          newline
+            "    ret"                                 newline
+            ".false:"                                 newline
+            "    mov rax, 0"                          newline
+            ".done:"                                  newline
+            "    ret"                                 newline
+            newline))))
+
+(define generate-object-asm
+   (fn (name type properties flags)
+      (define size (* 8 (+ 1 (length properties))))
+      (define getters (map-with-index (make-getter name) properties))
+      (define setters (map-with-index (make-setter name) properties))
+      (join
+         (list
+            (make-constructor name size type flags)
+            (make-predicate name type)
+            (join getters)
+            (join setters)))))
+
+;--------------------------------------------------
+; PAIR
+
+(define pair-asm
+   (generate-object-asm
+    "pair"
+    TYPE_PAIR_OBJ
+    (list "head" "tail")
+    0))
+
+(define pair-to-string-asm
+   (join
+      (list
+         "_rt_pair_to_string:"                     newline
+         ; TODO
+         "    ret"                                 newline
+         newline)))
+
+;--------------------------------------------------
+; STRING
+
+;(define string-asm
+;   (generate-object-asm
+;    "string"
+;    TYPE_STRING_OBJ
+;    (list "content_length" "buffer_length" "buffer")
+;    0))
+
+(define string-asm ((fn ()
+   (define size 32)
+   (define content-length-offset 8)
+   (define buffer-length-offset  16)
+   (define buffer-offset         24)
+   
+   (define string-new-asm
+      (join
+         (list
+            "_rt_string_new:"                          newline
+            "    mov rax, " (to-string size)           newline
+            "    call _rt_malloc"                      newline
+            "    mov qword [rax], " (to-string TYPE_STRING_OBJ) newline
+            "    mov qword [rax+" (to-string content-length-offset) "], 0" newline
+            "    mov qword [rax+" (to-string buffer-length-offset)  "], 0" newline
+            "    mov qword [rax+" (to-string buffer-offset)         "], 0" newline
+            "    ret"                                  newline
+            newline)))
+
+   (define string-predicate-asm (make-predicate "string" TYPE_STRING_OBJ))
+   
+   (define string-free-asm
+      (join
+         (list
+            "_rt_string_free:"                         newline
+            "    push r8"                              newline
+            "    mov r8, rax"                          newline
+            ; first free the buffer
+            "    mov rax, [rax+" (to-string buffer-offset) "]" newline
+            "    cmp rax, 0"                           newline
+            "    je .free"                             newline
+            "    call _rt_free"                        newline
+            ".free:"                                   newline
+            "    mov rax, r8"                          newline
+            "    call _rt_free"                        newline
+            "    pop r8"                               newline
+            "    ret"                                  newline
+            newline)))
+   
+   (define string-length-asm
+      (join
+         (list
+            "_rt_string_content_length_get:"           newline
+            "mov rax, [rax+" (to-string content-length-offset) "]" newline
+            "    ret"                                  newline
+            newline)))
+
+   (join (list string-new-asm string-predicate-asm string-free-asm string-length-asm))
+)))
+
+;--------------------------------------------------
+; INTEGER
+
+(define integer-asm
+   (generate-object-asm
+    "integer"
+    TYPE_INTEGER_OBJ
+    (list "value")
+    0))
+
+(define integer-to-string-asm
+   (join
+      (list
+         "_rt_integer_to_string:"                   newline
+         ; TODO
+         "    ret"                                  newline
+         newline)))
+
+;--------------------------------------------------
+; SYMBOL
+
+(define symbol-asm
+   (generate-object-asm
+    "symbol"
+    TYPE_SYMBOL_OBJ
+    (list "string")
+    0))
+
+(define symbol-to-string-asm
+   (join
+      (list
+         "_rt_symbol_to_string:"                    newline
+         ; TODO
+         "    ret"                                  newline
+         newline)))
+
+;--------------------------------------------------
+; PROCEDURE
+
+(define procedure-asm
+   (generate-object-asm
+    "procedure"
+    TYPE_PROCEDURE_OBJ
+    (list "params" "env" "body")
+    0))
+
+(define procedure-to-string-asm
+   (join
+      (list
+         "_rt_procedure_to_string:"                newline
+         ; TODO
+         "    ret"                                 newline
+         newline)))
+
+;--------------------------------------------------
+; MISC
+
+(define nil-to-string-asm
+   (join
+      (list
+         "_rt_nil_to_string:"                     newline
+         ; TODO
+         "    ret"                                newline
+         newline)))
+
+(define object-to-string-asm
+   (join
+      (list
+         "_rt_object_to_string:"                  newline
+         "    push r8"                            newline
+         "    mov r8, rax"                        newline
+         "    cmp rax, 0"                         newline  ; check for nil
+         "    jne .pair"                          newline
+         "    call _rt_nil_to_string"             newline
+         "    jmp .done"                          newline
+         ".pair:"                                 newline
+         "    mov rax, r8"                        newline
+         "    call _rt_is_pair_predicate"         newline
+         "    cmp rax, 1"                         newline
+         "    jne .string"                        newline
+         "    mov rax, r8"                        newline
+         "    call _rt_pair_to_string"            newline
+         "    jmp .done"                          newline
+         ".string:"                               newline
+         "    mov rax, r8"                        newline
+         "    call _rt_is_string_predicate"       newline
+         "    cmp rax, 1"                         newline
+         "    jne .integer"                       newline
+         "    mov rax, r8"                        newline  ; already a string
+         "    jmp .done"                          newline
+         ".integer:"                              newline
+         "    mov rax, r8"                        newline
+         "    call _rt_is_integer_predicate"      newline
+         "    cmp rax, 1"                         newline
+         "    jne .symbol"                        newline
+         "    mov rax, r8"                        newline
+         "    call _rt_integer_to_string"         newline
+         "    jmp .done"                          newline
+         ".symbol:"                               newline
+         "    mov rax, r8"                        newline
+         "    call _rt_is_symbol_predicate"       newline
+         "    cmp rax, 1"                         newline
+         "    jne .procedure"                     newline
+         "    mov rax, r8"                        newline
+         "    call _rt_symbol_to_string"          newline
+         "    jmp .done"                          newline
+         ".procedure:"                            newline
+         "    mov rax, r8"                        newline
+         "    call _rt_is_procedure_predicate"    newline
+         "    cmp rax, 1"                         newline
+         "    jne .error"                         newline
+         "    mov rax, r8"                        newline
+         "    call _rt_procedure_to_string"       newline
+         "    jmp .done"                          newline
+         ".error:"                                newline
+         ; TODO print error and exit
+         ".done:"                                 newline
+         "    pop r8"                             newline
+         "    ret"                                newline
+         newline)))
+
+;--------------------------------------------------
+(join (list
+   rodata-asm
+   "section .text" newline newline
+   pair-asm
+   string-asm
+   integer-asm
+   symbol-asm
+   procedure-asm
+   pair-to-string-asm
+   integer-to-string-asm
+   symbol-to-string-asm
+   procedure-to-string-asm
+   nil-to-string-asm
+   object-to-string-asm
+))
+
+)))
+

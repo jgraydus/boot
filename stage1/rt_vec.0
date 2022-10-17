@@ -1,0 +1,340 @@
+(define rt-vec-asm
+  ((fn ()
+      (define buffer-size-offset 0)
+      (define contents-size-offset 8)
+      (define buffer-offset 16)
+      (define sizeof-vec 24)
+
+      (define newline (chr 10))
+      (define dbl-quote (chr 34))
+
+      (define rodata
+         (join
+            (list
+               "section .rodata" newline
+               "    error_msg: db " dbl-quote "ERROR: vec buffer address is null" dbl-quote ", 10" newline
+               "    error_msg_len: equ $-error_msg" newline
+               newline)))
+
+      (define handle-error
+         (join
+            (list
+               "_rt_handle_vec_error:"                newline
+               "    mov rsi, error_msg"               newline
+               "    mov rdx, error_msg_len"           newline
+               "    call _rt_flush_print_buffer"      newline
+               "    call _rt_sys_exit"                newline
+               newline)))
+
+      (define vec-new
+         (join
+            (list
+               "_rt_vec_new:"                         newline
+               "    push r8"                          newline
+               "    push r9"                          newline
+               ; allocate buffer
+               "    mov r8, rax"                      newline
+               "    shl rax, 3"                       newline ; multiply by 8 (size of qword)
+               "    call _rt_malloc"                  newline
+               "    cmp rax, 0"                       newline
+               "    je .error"                        newline
+               "    mov r9, rax"                      newline ; buffer address
+               ; allocate vec
+               "    mov rax, " (to-string sizeof-vec) newline
+               "    call _rt_malloc"                  newline
+               "    mov [rax+" (to-string buffer-size-offset) "], r8"        newline
+               "    mov qword [rax+" (to-string contents-size-offset) "], 0" newline
+               "    mov [rax+" (to-string buffer-offset) "], r9"             newline
+               "    pop r9"                           newline
+               "    pop r8"                           newline
+               "    ret"                              newline
+               ".error:"                              newline
+               "    call _rt_handle_vec_error"        newline
+               newline)))
+
+      (define resize-buffer
+         (join
+            (list
+               "_rt_vec_resize_buffer:"                newline
+               "    push r8"                           newline
+               "    push r9"                           newline
+               "    push r10"                          newline
+               "    push rbx"                          newline
+               "    mov rbx, rax"                      newline
+               ; allocate new buffer
+               "    mov rax, [rbx+" (to-string buffer-size-offset) "]" newline ; buffer size
+               "    shl rax, 1"                        newline                 ; new buffer will be twice as large
+               "    call _rt_malloc"                   newline
+               "    cmp rax, 0"                        newline
+               "    je .error"                         newline
+               ; copy into new buffer
+               "    mov r8, [rbx+" (to-string buffer-offset) "]"         newline  ; old buffer address
+               "    mov r9, rax"                                         newline  ; new buffer address
+               "    mov r10, [rbx+" (to-string contents-size-offset) "]" newline  ; number of items to copy
+               "    push r8"                           newline
+               "    push r9"                           newline
+               ".next:"                                newline
+               "    cmp r10, 0"                        newline
+               "    je .done"                          newline ; no more items to copy
+               "    mov rax, [r8]"                     newline ; load from old buffer
+               "    mov [r9], rax"                     newline ; store to new buffer
+               "    add r8, 8"                         newline ; point at next slot
+               "    add r9, 8"                         newline
+               "    dec r10"                           newline
+               "    jmp .next"                         newline
+               ".done:"                                newline
+               "    pop rax"                           newline ; free the old buffer
+               "    call _rt_free"                     newline
+               "    pop rax"                           newline ; point vec at new buffer
+               "    mov [rbx+" (to-string buffer-offset) "], rax" newline
+               "    mov rax, rbx"                      newline
+               "    pop rbx"                           newline
+               "    pop r10"                           newline
+               "    pop r9"                            newline
+               "    pop r8"                            newline
+               "    ret"                               newline
+               ".error:"                               newline
+               "    call _rt_handle_vec_error"         newline
+               newline)))
+
+      (define vec-append
+         (join
+            (list
+               "_rt_vec_append:"                                           newline
+               "    push r8"                                               newline
+               "    push rbx"                                              newline
+               ; if the buffer is full, resize
+               "    mov rbx, [rax+" (to-string contents-size-offset) "]"   newline
+               "    cmp rbx, [rax+" (to-string buffer-size-offset) "]"     newline
+               "    jne .append"                                           newline
+               "    call _rt_vec_resize_buffer"                            newline
+               ".append:"                                                  newline
+               ; point at the next slot in buffer
+               "    mov r8, [rax+" (to-string contents-size-offset) "]"    newline
+               "    shl r8, 3"                                             newline ; multiply by 8
+               "    add r8, [rax+" (to-string buffer-offset) "]"           newline
+               ; copy into slot
+               "    mov [r8], rsi"                                         newline
+               ; increment content size
+               "    mov r8, [rax+" (to-string contents-size-offset) "]"    newline
+               "    inc r8"                                                newline
+               "    mov [rax+" (to-string contents-size-offset) "], r8"    newline
+               "    pop rbx"                                               newline
+               "    pop r8"                                                newline
+               "    ret"                                                   newline
+               newline)))
+
+      (define vec-remove
+         (join
+            (list
+               "_rt_vec_remove:"                                           newline
+               "    push r8"                                               newline
+               "    push r9"                                               newline
+               "    push r10"                                              newline
+               "    mov r8, rax"                                           newline  ; vec
+               "    mov r9, rsi"                                           newline  ; index of item to remove
+               "    call _rt_vec_get_value_at"                             newline
+               "    mov r10, rax"                                          newline  ; removed value
+               ; move item in last position to the position of removed item
+               "    mov rax, r8"                                           newline
+               "    mov rsi, [rax+" (to-string contents-size-offset) "]"   newline
+               "    sub rsi, 1"                                            newline  ; rsi: index of last item
+               "    call _rt_vec_get_value_at"                             newline
+               "    mov rdi, rax"                                          newline
+               "    mov rax, r8"                                           newline
+               "    mov rsi, r9"                                           newline
+               "    call _rt_vec_set_value_at"                             newline
+               ; decrement size
+               "    mov rax, [r8+" (to-string contents-size-offset) "]"    newline
+               "    dec rax"                                               newline
+               "    mov [r8+" (to-string contents-size-offset) "], rax"    newline
+               ; done
+               "    mov rax, r10"                                          newline
+               "    pop r10"                                               newline
+               "    pop r9"                                                newline
+               "    pop r8"                                                newline
+               "    ret"                                                   newline
+               newline)))
+
+      (define get-value-at
+         (join
+            (list
+               "_rt_vec_get_value_at:"                                     newline
+               "    shl rsi, 3"                                            newline  ; multiply by 8
+               "    add rsi, [rax+" (to-string buffer-offset) "]"          newline  ; add buffer address
+               "    mov rax, [rsi]"                                        newline
+               "    ret"                                                   newline
+               newline)))
+
+      (define set-value-at
+         (join
+            (list
+               "_rt_vec_set_value_at:"                                     newline
+               "    shl rsi, 3"                                            newline  ; multiply by 8
+               "    add rsi, [rax+" (to-string buffer-offset) "]"          newline  ; add buffer address
+               "    mov [rsi], rdi"                                        newline
+               newline)))
+
+      (define vec-length
+         (join
+            (list
+               "_rt_vec_length:"                                            newline
+               "    push r8"                                                newline
+               "    mov r8, rax"                                            newline
+               "    mov rax, [r8+" (to-string contents-size-offset) "]"     newline
+               "    pop r8"                                                 newline
+               "    ret"                                                    newline
+               newline))) 
+
+      (define vec-free
+         (join
+            (list
+               "_rt_vec_free:"                                             newline
+               "    push r8"                                               newline
+               "    mov r8, rax"                                           newline
+               ; free the buffer
+               "    mov rax, [rax+" (to-string buffer-offset) "]"          newline
+               "    cmp rax, 0"                                            newline
+               "    je .error"                                             newline
+               "    call _rt_free"                                         newline
+               ; free the vec
+               "    mov rax, r8"                                           newline
+               "    call _rt_free"                                         newline
+               "    pop r8"                                                newline
+               "    ret"                                                   newline
+               ".error:"                                                   newline
+               "    call _rt_handle_vec_error"                             newline
+               newline)))
+
+      (define vec-for-each
+         (join
+            (list
+               "_rt_vec_for_each:"              newline
+               "    push r8"                    newline
+               "    push r9"                    newline
+               "    push r10"                   newline
+               "    push r11"                   newline
+               "    mov r8, rax"                newline  ; r8: vec
+               "    mov r9, rsi"                newline  ; r9: address of code to invoke
+               "    call _rt_vec_length"        newline
+               "    mov r11, rax"               newline  ; r11: number of items
+               "    mov r10, 0"                 newline  ; r10: index of next item
+               ".loop:"                         newline
+               "    cmp r10, r11"               newline
+               "    je .done"                   newline
+               "    mov rax, r8"                newline  ; load the next value
+               "    mov rsi, r10"               newline
+               "    call _rt_vec_get_value_at"  newline
+               "    call r9"                    newline  ; invoke code
+               "    inc r10"                    newline  ; go to next item
+               "    jmp .loop"                  newline
+               ".done:"                         newline
+               "    pop r11"                    newline
+               "    pop r10"                    newline
+               "    pop r9"                     newline
+               "    pop r8"                     newline
+               "    ret"                        newline 
+               newline)))
+
+      (define stack-initial-buffer-size 16)
+
+      (define stack-new
+         (join
+            (list
+               "_rt_stack_new:"                 newline
+               "    mov rax, " (to-string stack-initial-buffer-size) newline
+               "    jmp _rt_vec_new"            newline
+               newline)))
+
+      (define stack-size
+         (join
+            (list
+               "_rt_stack_size:"                newline
+               "    jmp _rt_vec_length"         newline
+               newline)))
+
+      (define stack-push
+         (join
+            (list
+               "_rt_stack_push:"                newline
+               "    jmp _rt_vec_append"         newline
+               newline)))
+
+      (define stack-pop
+         (join
+            (list
+               "_rt_stack_pop:"                 newline
+               "    push r8"                    newline
+               "    push rsi"                   newline
+               "    mov r8, rax"                newline
+               "    call _rt_vec_length"        newline
+               "    cmp rax, 0"                 newline
+               "    je .done"                   newline
+               "    dec rax"                    newline
+               "    mov rsi, rax"               newline  ; index of last element
+               "    mov rax, r8"                newline
+               "    call _rt_vec_remove"        newline
+               ".done:"                         newline
+               "    pop rsi"                    newline
+               "    pop r8"                     newline
+               "    ret"                        newline
+               newline)))
+
+      (define stack-peek
+         (join
+            (list
+               "_rt_stack_peek:"                newline
+               "    push r8"                    newline
+               "    push rsi"                   newline
+               "    mov r8, rax"                newline
+               "    call _rt_vec_length"        newline
+               "    cmp rax, 0"                 newline
+               "    je .done"                   newline
+               "    dec rax"                    newline
+               "    mov rsi, rax"               newline  ; index of last element
+               "    mov rax, r8"                newline
+               "    call _rt_vec_get_value_at"  newline
+               ".done:"                         newline
+               "    pop rsi"                    newline
+               "    pop r8"                     newline
+               "    ret"                        newline
+               newline)))
+
+      (define stack-free
+         (join
+            (list
+               "_rt_stack_free:"                newline
+               "    jmp _rt_vec_free"           newline
+               newline)))
+
+      (define stack-for-each
+         (join
+            (list
+               "_rt_stack_for_each:"            newline
+               "    jmp _rt_vec_for_each"       newline
+               newline)))
+
+      (join
+         (list
+            rodata
+            "section .text" newline
+            newline
+            handle-error
+            vec-new
+            resize-buffer
+            vec-append
+            vec-remove
+            get-value-at
+            set-value-at
+            vec-length
+            vec-free
+            vec-for-each
+            stack-new
+            stack-size
+            stack-push
+            stack-pop
+            stack-peek
+            stack-free
+            stack-for-each))
+)))
+

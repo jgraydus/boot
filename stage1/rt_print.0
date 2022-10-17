@@ -1,0 +1,17 @@
+(define rt-print-asm
+   ((fn ()
+      (define newline (chr 10))
+
+      (define flush-print-buffer
+         (join
+            (list
+               "_rt_flush_print_buffer:"       newline
+               "    push rdi"                  newline
+               "    mov rdi, STDOUT_FILENO"    newline
+               "    call _rt_sys_write"        newline
+               "    pop rdi"                   newline
+               "    ret"                       newline
+               newline)))
+
+      (join (list flush-print-buffer))
+)))

@@ -1,0 +1,58 @@
+(define rt-gc-asm ((fn ()
+
+(define newline (chr 10))
+
+(define gc-init
+   (join
+      (list
+         "section .bss"                      newline
+         "    rt_gc_registry: resq 1"        newline
+         "section .text"                     newline
+         "_rt_gc_init:"                      newline
+         "    push rax"                      newline
+         "    mov qword rax, 1024"           newline
+         "    call _rt_vec_new"              newline
+         "    mov [rt_gc_registry], rax"     newline
+         "    pop rax"                       newline
+         "    ret"                           newline
+         newline)))
+
+(define gc-set-root-object
+   (join
+      (list
+         "section .bss"                      newline
+         "    rt_gc_root_object: resq 1"     newline
+         "section .text"                     newline
+         "_rt_gc_set_root_object:"           newline
+         "    mov [rt_gc_root_object], rax"  newline
+         "    ret"                           newline
+         newline)))
+
+(define gc-register-object
+   (join
+      (list
+         "_rt_gc_register_object:"           newline
+         "    push rsi"                      newline
+         "    mov rsi, rax"                  newline
+         "    mov rax, [rt_gc_registry]"     newline
+         "    call _rt_vec_append"           newline
+         "    pop rsi"                       newline
+         "    ret"                           newline
+         newline)))
+
+(define gc-run
+   (join
+      (list
+         "_rt_gc_run:"                 newline
+         ; TODO
+         "    ret"                     newline
+         newline)))
+
+(join
+   (list
+      gc-init
+      gc-set-root-object
+      gc-run))
+
+)))
+

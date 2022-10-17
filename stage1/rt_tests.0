@@ -1,0 +1,412 @@
+(eval (parse (read-file "prelude.0")))
+(import "rt.0")
+
+(define tab (chr 9))
+(define newline (chr 10))
+(define dbl-quote (chr 34))
+
+(define green
+   (fn (txt)
+      (join
+         (list
+            (chr 27)
+            "[38;2;78;154;6m"
+            txt
+            (chr 27)
+            "[0m"))))
+
+(define checkmark-asm
+   (join
+      (list
+         "section .rodata"                                           newline
+         "    checkmark: db " dbl-quote (green "✓") dbl-quote ", 10" newline
+         "    checkmark_len: equ $-checkmark"                        newline
+         "section .text"                                             newline
+         "_tests_print_checkmark:"                                   newline
+         "    push rsi"                                              newline
+         "    push rdx"                                              newline
+         "    mov rsi, checkmark"                                    newline
+         "    mov rdx, checkmark_len"                                newline
+         "    call _rt_flush_print_buffer"                           newline
+         "    pop rdx"                                               newline
+         "    pop rsi"                                               newline
+         "    ret"                                                   newline
+         newline)))
+
+(define noop-asm
+   (join
+      (list
+         "_test_noop:"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define vec-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    vec_msg: db " dbl-quote "- vec" tab tab dbl-quote newline
+         "    vec_msg_len: equ $-vec_msg"                     newline
+         "section .text"                                      newline
+         "_test_vec:"                                         newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, vec_msg"                               newline
+         "    mov rdx, vec_msg_len"                           newline
+         "    call _rt_flush_print_buffer"                    newline
+         ; allocate a new vec
+         "    call _rt_vec_new"                               newline
+         "    mov r8, rax"                                    newline
+         ; do a bunch of appends
+         "    mov rcx, 1000000"                               newline
+         ".next_append:"                                      newline
+         "    mov rax, r8"                                    newline
+         "    mov rsi, rcx"                                   newline
+         "    call _rt_vec_append"                            newline
+         "    dec rcx"                                        newline
+         "    cmp rcx, 0"                                     newline
+         "    jne .next_append"                               newline
+         ; get some values
+         "    mov rax, r8"                                    newline
+         "    mov rsi, 0"                                     newline
+         "    call _rt_vec_get_value_at"                      newline
+         "    mov rax, r8"                                    newline
+         "    mov rsi, 1000"                                  newline
+         "    call _rt_vec_get_value_at"                      newline
+         "    mov rax, r8"                                    newline
+         "    mov rsi, 999999"                                newline
+         "    call _rt_vec_get_value_at"                      newline
+         ; for each
+         "    mov rax, r8"                                    newline
+         "    mov rsi, _test_noop"                            newline
+         "    call _rt_vec_for_each"                          newline 
+         ; set some values
+         "    mov rax, r8"                                    newline
+         "    mov rsi, 0"                                     newline
+         "    mov rsi, 42"                                    newline
+         "    call _rt_vec_set_value_at"                      newline
+         "    mov rax, r8"                                    newline
+         "    mov rsi, 10000"                                 newline
+         "    mov rsi, 42"                                    newline
+         "    call _rt_vec_set_value_at"                      newline
+         ; get length of vec
+         "    mov rax, r8"                                    newline
+         "    call _rt_vec_length"                            newline
+         ; do a bunch of deletes
+         "    mov rcx, 1000000"                               newline
+         ".next_delete:"                                      newline
+         "    mov rax, r8"                                    newline
+         "    mov rsi, 0"                                     newline
+         "    call _rt_vec_remove"                            newline
+         "    dec rcx"                                        newline
+         "    cmp rcx, 0"                                     newline
+         "    jne .next_delete"                               newline 
+         ; free the vec
+         "    mov rax, r8"                                    newline
+         "    call _rt_vec_free"                              newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define stack-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    stack_msg: db " dbl-quote "- stack" tab tab dbl-quote newline
+         "    stack_msg_len: equ $-stack_msg"                 newline
+         "section .text"                                      newline
+         "_test_stack:"                                       newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, stack_msg"                             newline
+         "    mov rdx, stack_msg_len"                         newline
+         "    call _rt_flush_print_buffer"                    newline
+         "    call _rt_stack_new"                             newline
+         "    mov r8, rax"                                    newline
+         ; push a bunch of values
+         "    mov rcx, 100000"                                newline
+         ".next_push:"                                        newline
+         "    mov rax, r8"                                    newline
+         "    mov rsi, rcx"                                   newline
+         "    call _rt_stack_push"                            newline
+         "    dec rcx"                                        newline
+         "    cmp rcx, 0"                                     newline
+         "    jne .next_push"                                 newline
+         ; peek at the top value
+         "    mov rax, r8"                                    newline
+         "    call _rt_stack_peek"                            newline
+         ; for each
+         "    mov rax, r8"                                    newline
+         "    mov rsi, _test_noop"                            newline
+         "    call _rt_stack_for_each"                        newline
+         ; pop all the values 
+         ".next_pop:"                                         newline
+         "    mov rax, r8"                                    newline
+         "    call _rt_stack_pop"                             newline
+         "    mov rax, r8"                                    newline
+         "    call _rt_stack_size"                            newline
+         "    cmp rax, 0"                                     newline
+         "    jne .next_pop"                                  newline
+         ; free the stack
+         "    mov rax, r8"                                    newline
+         "    call _rt_stack_free"                            newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define pair-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    pair_msg: db " dbl-quote "- pair" tab tab dbl-quote newline
+         "    pair_msg_len: equ $-pair_msg"                   newline
+         "section .text"                                      newline
+         "_test_pair:"                                        newline
+         "    push rbx"                                       newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, pair_msg"                              newline
+         "    mov rdx, pair_msg_len"                          newline
+         "    call _rt_flush_print_buffer"                    newline
+         ; make a new pair
+         "    call _rt_pair_new"                              newline
+         "    mov r8, rax"                                    newline
+         ; predicate
+         "    mov rax, r8"                                    newline
+         "    call _rt_is_pair_predicate"                     newline
+         ; setters
+         "    mov rax, r8"                                    newline
+         "    mov rbx, r8"                                    newline
+         "    call _rt_pair_head_set"                         newline
+         "    mov rax, r8"                                    newline
+         "    mov rbx, r8"                                    newline
+         "    call _rt_pair_tail_set"                         newline
+         ; getters
+         "    mov rax, r8"                                    newline
+         "    call _rt_pair_head_get"                         newline
+         "    mov rax, r8"                                    newline
+         "    call _rt_pair_tail_get"                         newline
+         ; free the pair
+         "    mov rax, r8"                                    newline
+         "    call _rt_free"                                  newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    pop rbx"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define string-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    string_msg: db " dbl-quote "- string" tab dbl-quote newline
+         "    string_msg_len: equ $-string_msg"                   newline
+         "section .text"                                      newline
+         "_test_string:"                                      newline
+         "    push rbx"                                       newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, string_msg"                            newline
+         "    mov rdx, string_msg_len"                        newline
+         "    call _rt_flush_print_buffer"                    newline
+         ; make a new string
+         "    call _rt_string_new"                            newline
+         "    mov r8, rax"                                    newline
+         ; string predicate
+         "    mov rax, r8"                                    newline
+         "    call _rt_is_string_predicate"                   newline
+         ; string length
+         "    mov rax, r8"                                    newline
+         "    call _rt_string_content_length_get"             newline 
+         ; free the string
+         "    mov rax, r8"                                    newline
+         "    call _rt_free"                                  newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    pop rbx"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define integer-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    integer_msg: db " dbl-quote "- integer" tab dbl-quote newline
+         "    integer_msg_len: equ $-integer_msg"                   newline
+         "section .text"                                      newline
+         "_test_integer:"                                     newline
+         "    push rbx"                                       newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, integer_msg"                           newline
+         "    mov rdx, integer_msg_len"                       newline
+         "    call _rt_flush_print_buffer"                    newline
+         ; make a new integer
+         "    call _rt_integer_new"                           newline
+         "    mov r8, rax"                                    newline
+         ; integer predicate
+         "    mov rax, r8"                                    newline
+         "    call _rt_is_integer_predicate"                  newline
+         ; integer value
+         "    mov rax, r8"                                    newline
+         "    call _rt_integer_value_get"                     newline 
+         ; free the integer
+         "    mov rax, r8"                                    newline
+         "    call _rt_free"                                  newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    pop rbx"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define symbol-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    symbol_msg: db " dbl-quote "- symbol" tab dbl-quote newline
+         "    symbol_msg_len: equ $-symbol_msg"                   newline
+         "section .text"                                      newline
+         "_test_symbol:"                                      newline
+         "    push rbx"                                       newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, symbol_msg"                            newline
+         "    mov rdx, symbol_msg_len"                        newline
+         "    call _rt_flush_print_buffer"                    newline
+         ; make a new symbol
+         "    call _rt_symbol_new"                            newline
+         "    mov r8, rax"                                    newline
+         ; symbol predicate
+         "    mov rax, r8"                                    newline
+         "    call _rt_is_symbol_predicate"                   newline
+         ; get the string
+         "    mov rax, r8"                                    newline
+         "    call _rt_symbol_string_get"                     newline
+         ; free the symbol
+         "    mov rax, r8"                                    newline
+         "    call _rt_free"                                  newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    pop rbx"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define procedure-asm
+   (join
+      (list
+         "section .rodata"                                    newline
+         "    proc_msg: db " dbl-quote "- procedure" tab dbl-quote newline
+         "    proc_msg_len: equ $-proc_msg"                   newline
+         "section .text"                                      newline
+         "_test_procedure:"                                   newline
+         "    push rbx"                                       newline
+         "    push rsi"                                       newline
+         "    push rdi"                                       newline
+         "    push rdx"                                       newline
+         "    push r8"                                        newline
+         "    mov rsi, proc_msg"                              newline
+         "    mov rdx, proc_msg_len"                          newline
+         "    call _rt_flush_print_buffer"                    newline
+         ; make a new procedure
+         "    call _rt_procedure_new"                         newline
+         "    mov r8, rax"                                    newline
+         ; procedure predicate
+         "    mov rax, r8"                                    newline
+         "    call _rt_is_procedure_predicate"                newline
+         ; free the procedure
+         "    mov rax, r8"                                    newline
+         "    call _rt_free"                                  newline
+         ; done
+         "    call _tests_print_checkmark"                    newline
+         "    pop r8"                                         newline
+         "    pop rdx"                                        newline
+         "    pop rdi"                                        newline
+         "    pop rsi"                                        newline
+         "    pop rbx"                                        newline
+         "    ret"                                            newline
+         newline)))
+
+(define main-asm
+   (join
+      (list
+         "section .text"                     newline
+         "global _start"                     newline
+         "_start:"                           newline
+         "    push r12"                      newline
+         "    push r13"                      newline
+         "    push r14"                      newline
+         "    push r15"                      newline
+         "    call _rt_init_heap"            newline
+
+         "    call _test_vec"                newline
+         "    call _test_stack"              newline
+         "    call _test_pair"               newline
+         "    call _test_string"             newline
+         "    call _test_integer"            newline
+         "    call _test_symbol"             newline
+         "    call _test_procedure"          newline
+
+         "    pop r15"                       newline
+         "    pop r14"                       newline
+         "    pop r13"                       newline
+         "    pop r12"                       newline
+         "    mov rdi, EXIT_SUCCESS"         newline
+         "    call _rt_sys_exit"             newline
+         newline)))
+
+(define asm
+   (join
+      (list
+         rt-asm
+         noop-asm
+         checkmark-asm
+         vec-asm
+         stack-asm
+         pair-asm
+         string-asm
+         integer-asm
+         symbol-asm
+         procedure-asm
+         main-asm
+         newline)))
+
+(write-file "rt_tests.asm" asm)
+(exit)
+

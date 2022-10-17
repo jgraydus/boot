@@ -1,0 +1,124 @@
+; linux system calls
+(define SYS_READ    0)
+(define SYS_WRITE   1)
+(define SYS_OPEN    2)
+(define SYS_CLOSE   3)
+(define SYS_MMAP    9)
+(define SYS_EXIT   60)
+
+; flags for open sys call
+(define O_RDONLY    0)
+(define O_WRONLY    1)
+(define O_RDWR      2)
+(define O_CREAT    64)
+(define O_TRUNC   512)
+(define O_APPEND 1024)
+
+; file modes
+(define S_IRWXU 448)
+(define S_IRUSR 256)
+(define S_IWUSR 128)
+(define S_IXUSR  64)
+(define S_IRWXG  56)
+(define S_IRGRP  32)
+(define S_IWGRP  16)
+(define S_IXGRP   8)
+(define S_IRWXO   7)
+(define S_IROTH   4)
+(define S_IWOTH   2)
+(define S_IXOTH   1)
+
+; exit codes
+(define EXIT_SUCCESS 0)
+
+; MMAP flags
+(define MAP_SHARED     1)
+(define MAP_PRIVATE    2)
+(define MAP_ANONYMOUS 32)
+(define PROT_WRITE     2)
+
+; standard file descriptors
+(define STDIN_FILENO  0)
+(define STDOUT_FILENO 1)
+(define STDERR_FILENO 2)
+
+(define rt-sys-calls-asm
+   ((fn ()
+      (define newline (chr 10))
+      
+      (define constants
+         (reduce
+            (fn (acc next)
+               (define line (join (list (head next)  " equ " (to-string (nth 1 next)) newline)))
+               (string-append acc line))
+            ""
+            (list
+               (list "SYS_READ"  SYS_READ)
+               (list "SYS_WRITE" SYS_WRITE)
+               (list "SYS_OPEN"  SYS_OPEN)
+               (list "SYS_CLOSE" SYS_CLOSE)
+               (list "SYS_MMAP"  SYS_MMAP)
+               (list "SYS_EXIT"  SYS_EXIT)
+               (list "O_RDONLY"  O_RDONLY)
+               (list "O_WRONLY"  O_WRONLY)
+               (list "O_RDWR"    O_RDWR)
+               (list "O_CREAT"   O_CREAT)
+               (list "O_TRUNC"   O_TRUNC)
+               (list "O_APPEND"  O_APPEND)
+               (list "S_IRWXU" S_IRWXU)
+               (list "S_IRUSR" S_IRUSR)
+               (list "S_IWUSR" S_IWUSR)
+               (list "S_IXUSR" S_IXUSR)
+               (list "S_IRWXG" S_IRWXG)
+               (list "S_IRGRP" S_IRGRP)
+               (list "S_IWGRP" S_IWGRP)
+               (list "S_IXGRP" S_IXGRP)
+               (list "S_IRWXO" S_IRWXO)
+               (list "S_IROTH" S_IROTH)
+               (list "S_IWOTH" S_IWOTH)
+               (list "S_IXOTH" S_IXOTH)
+               (list "EXIT_SUCCESS"  EXIT_SUCCESS)
+               (list "MAP_SHARED"    MAP_SHARED)
+               (list "MAP_PRIVATE"   MAP_PRIVATE)
+               (list "MAP_ANONYMOUS" MAP_ANONYMOUS)
+               (list "PROT_WRITE"    PROT_WRITE)
+               (list "STDIN_FILENO"  STDIN_FILENO)
+               (list "STDOUT_FILENO" STDOUT_FILENO)
+               (list "STDERR_FILENO" STDERR_FILENO))))
+      
+      (define sys-call
+         (join
+            (list
+               "_rt_sys_call:"      newline
+               "    push rcx"       newline ; linux sys calls clobber rcx and r11
+               "    push r11"       newline
+               "    syscall"        newline
+               "    pop r11"        newline
+               "    pop rcx"        newline
+               "    ret"            newline
+               newline)))
+      
+      (define sys-calls
+         ((fn ()
+             (define emit-sys-call
+                (fn (sys-call)
+                   (join
+                      (list
+                         "_rt_" (to-lower-case sys-call) ":" newline
+                         "    mov rax, " sys-call            newline
+                         "    call _rt_sys_call"             newline
+                         "    ret"                           newline
+                         newline))))
+             (define sys-calls
+                (list
+                   "SYS_READ"
+                   "SYS_WRITE"
+                   "SYS_OPEN"
+                   "SYS_CLOSE"
+                   "SYS_MMAP"
+                   "SYS_EXIT"))
+             (join (map emit-sys-call sys-calls)))))
+   
+      (join (list constants newline sys-call sys-calls))
+)))
+

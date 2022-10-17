@@ -1,0 +1,170 @@
+(define HEAP_SIZE (* (* 1024 1024) 100)) ; 100 MB
+
+(define rt-memory-asm
+   ((fn ()
+      (define newline (chr 10))
+      (define dbl-quote (chr 34))
+
+      (define heap-size
+         (join
+            (list
+               "HEAP_SIZE equ " (to-string HEAP_SIZE) newline
+               newline)))
+      
+      (define bss
+         (join
+            (list
+               "section .bss"               newline
+               "    heap:         resq 1"   newline
+               "    next:         resq 1"   newline
+               "    remaining:    resq 1"   newline
+               "    allocated:    resq 1"   newline
+               "    free_list:    resq 1"   newline
+               "    print_buffer: resb 256" newline
+               newline)))
+      
+      (define data
+         (join
+            (list
+               "section .data"                                                  newline
+               "    oom: db " dbl-quote "ERROR: Out of memory" dbl-quote ", 10" newline
+               "    oom_len: dq 21"                                             newline
+               newline)))
+      
+      (define init-heap
+         (join
+            (list
+               "_rt_init_heap:"                           newline
+               "    push rdi"                             newline 
+               "    push rsi"                             newline
+               "    push rdx"                             newline
+               "    push r10"                             newline
+               "    push r9"                              newline
+               "    push r8"                              newline
+               "    mov rdi, 0"                           newline
+               "    mov rsi, HEAP_SIZE"                   newline
+               "    mov rdx, PROT_WRITE"                  newline
+               "    mov r10, MAP_PRIVATE | MAP_ANONYMOUS" newline
+               "    mov r8, -1"                           newline ; file descriptor (always -1 for MAP_ANONYMOUS)
+               "    mov r9, 0"                            newline ; offset (always 0 for MAP_ANONYMOUS)
+               "    call _rt_sys_mmap"                    newline
+               "    mov [heap], rax"                      newline
+               "    mov [next], rax"                      newline
+               "    mov qword [remaining], HEAP_SIZE"     newline
+               "    mov qword [allocated], 0"             newline
+               "    pop r8"                               newline
+               "    pop r9"                               newline
+               "    pop r10"                              newline
+               "    pop rdx"                              newline
+               "    pop rsi"                              newline
+               "    pop rdi"                              newline 
+               "    ret"                                  newline
+               newline)))
+      
+      (define malloc
+         (join
+            (list
+               "_rt_malloc:"                     newline
+               "    push rbx"                    newline
+               "    push r8"                     newline
+               "    push r9"                     newline
+               "    push r10"                    newline
+               "    push r11"                    newline
+               "    push r12"                    newline
+               "    mov r8, rax"                 newline ; r8: requested size
+               "    mov r12, rax"                newline ; r12: largest chunk in free list that we'll reuse for this allocation
+               "    add r12, 8"                  newline
+               "    mov r9, [free_list]"         newline ; r9: next node in free list
+               "    mov r10, 0"                  newline ; r10: previous free list node
+               ".next:"                          newline
+               ; if r9 points at null, there's no chunk in free list that meets criteria for reuse
+               "    cmp r9, 0"                   newline
+               "    je .new_allocation"          newline
+               "    mov r11, [r9+8]"             newline ; get the size of this chunk
+               "    cmp r11, r8"                 newline ; large enough?
+               "    jl .advance"                 newline
+               "    cmp r11, r12"                newline ; too large?
+               "    jle .reuse"                  newline
+               ".advance:"                       newline ; go to next node in free list
+               "    mov r10, r9"                 newline ; remember previous
+               "    mov r9, [r9+0]"              newline
+               "    jmp .next"                   newline
+               ".reuse:"                         newline
+               "    mov r11, [r9+0]"             newline ; next node in free list
+               "    cmp r10, 0"                  newline ; if previous node is null, we're replacing the head of the list
+               "    je .new_head"                newline
+               "    mov [r10+0], r11"            newline ; change previous node to point at node after current node
+               "    jmp .finish_reuse"           newline
+               ".new_head:"                      newline
+               "    mov [free_list], r11"        newline
+               ".finish_reuse:"                  newline
+               "    mov r8, [r9+8]"              newline ; change amount request to actual size of the assigned chunk
+               "    lea rax, [r9+16]"            newline ; return the address of the usable memory of the chunk
+               "    jmp .done"                   newline
+               ".new_allocation:"                newline
+               "    mov rax, r8"                 newline ; the allocated chunk size is 16 bytes larger than requested
+               "    add rax, 16"                 newline ; in order to hold the free list pointer and the chunk size
+               "    cmp rax, [remaining]"        newline
+               "    jg .run_gc"                  newline ; out of memory - collect garbage
+               ".new_allocation_cont:"           newline
+               "    mov rbx, [remaining]"        newline ; decrement the remaining space by the amount being allocated
+               "    sub rbx, rax"                newline
+               "    mov [remaining], rbx"        newline
+               ; prepare the new allocation
+               "    mov rbx, [next]"             newline
+               "    add rbx, rax"                newline ; rbx points at the unallocated part of the heap
+               "    mov rax, [next]"             newline ; rax points at the newly allocated chunk
+               "    mov [next], rbx"             newline
+               "    mov qword [rax], 0"          newline ; first qword is free list pointer
+               "    mov [rax+8], r8"             newline ; second qword is the size of the chunk
+               "    add rax, 16"                 newline ; the program-usable memory starts at the third qword
+               ".done:"                          newline
+               "    add [allocated], r8"         newline
+               "    pop r12"                     newline 
+               "    pop r11"                     newline 
+               "    pop r10"                     newline 
+               "    pop r9"                      newline 
+               "    pop r8"                      newline
+               "    pop rbx"                     newline
+               "    ret"                         newline
+               ".run_gc:"                        newline
+               "    push rax"                    newline
+               "    call _rt_gc_run"             newline
+               "    pop rax"                     newline
+               "    cmp rax, [remaining]"        newline
+               "    jg .handle_oom"              newline
+               "    jmp .new_allocation_cont"    newline
+               ".handle_oom:"                    newline
+               "    mov rsi, oom"                newline
+               "    mov rdx, [oom_len]"          newline
+               "    call _rt_flush_print_buffer" newline
+               "    mov rdi, 1"                  newline
+               "    call _rt_sys_exit"           newline
+               newline)))
+      
+      (define free
+         (join
+            (list
+               "_rt_free:"                    newline
+               "    push r8"                  newline
+               "    sub rax, 16"              newline ; start of chunk is 2 qwords ahead of data address
+               "    mov r8, [rax+8]"          newline ; get size of chunk
+               "    sub [allocated], r8"      newline ; bookkeeping
+               "    mov r8, [free_list]"      newline ; push onto top of free list
+               "    mov [rax], r8"            newline 
+               "    mov [free_list], rax"     newline
+               "    pop r8"                   newline
+               "    ret"                      newline
+               newline)))
+
+      (join
+         (list
+            heap-size
+            bss data
+            "section .text" newline
+            newline
+            init-heap
+            malloc
+            free))
+)))
+      
