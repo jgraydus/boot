@@ -1,0 +1,117 @@
+; TODO this works but could be made much more efficient
+
+(define string-get-hash-value
+   (fn (str)
+      (define p 257)
+      (define m 4294967296)
+      (define q 1)
+      (define result 0)
+      (define f
+         (fn (i)
+            (define c (ord (char-at i str)))
+            (set! result (mod (+ result (* c q)) m))
+            (set! q (mod (* q p) m))))
+      (define idxs (range 0 (- (string-length str) 1)))
+      (map f idxs)
+      result))
+
+(define get-hash-value
+   (fn (x)
+      (string-get-hash-value (if (string? x) x (to-string x)))))
+
+(define make-hash-map
+   (fn ()
+      (list
+         (quote hash-map)
+         0
+         (make-array 16))))
+
+(define hash-map-size
+   (fn (hash-map) (nth 1 hash-map)))
+
+(define hash-map-insert-unchecked
+   (fn (hash-map key value)
+      (define arr (nth 2 hash-map))
+      (define m (array-size arr))
+      (define hash (get-hash-value key))
+      (define i (mod hash m))
+      (define bucket (array-get arr i))
+      (set! bucket
+         (cons
+            (list key value)
+            (filter (fn (entry) (not (= key (head entry)))) bucket)))
+      (array-set arr i bucket)
+      (define size (nth 1 hash-map))
+      (set-head! (tail hash-map) (+ 1 size))
+      hash-map))
+
+(define hash-map-resize
+   (fn (hash-map)
+      (define old-arr (nth 2 hash-map))
+      (define new-arr (make-array (* 2 (array-size old-arr))))
+      (set-nth! hash-map 2 new-arr)
+      (map
+         (fn (i)
+            (map
+               (fn (entry)
+                  (hash-map-insert-unchecked
+                     hash-map (head entry) (nth 1 entry)))
+               (array-get old-arr i)))
+         (range 0 (- (array-size old-arr) 1)))
+      hash-map))
+
+(define hash-map-get
+   (fn (hash-map key)
+      (define arr (nth 2 hash-map))
+      (define m (array-size arr))
+      (define hash (get-hash-value key))
+      (define i (mod hash m))
+      (define bucket (array-get arr i))
+      (define tmp (filter (fn (entry) (= key (head entry))) bucket))
+      (if (nil? tmp) nil (nth 1 (head tmp)))))
+
+(define hash-map-insert
+   (fn (hash-map key value)
+      (define size (hash-map-size hash-map))
+      (define capacity (array-size (nth 2 hash-map)))
+      (if (> (* 2 size) capacity) (hash-map-resize hash-map) nil)
+      (hash-map-insert-unchecked hash-map key value)))
+
+(define hash-map-tests (fn ()
+   ((fn ()
+      (define h (make-hash-map))
+      (hash-map-insert-unchecked h "foo" "bar")
+      (assert (= (hash-map-get h "foo") "bar") "hash-map-get")
+      nil
+   ))
+   
+   ((fn ()
+      (define h (make-hash-map))
+      (map (fn (i) (hash-map-insert-unchecked h i i)) (range 1 100))
+      (map
+         (fn (i) (assert (= i (hash-map-get h i)) (to-string i)))
+         (range 1 100))
+      nil
+   ))
+   
+   ((fn ()
+      (define h (make-hash-map))
+      (map (fn (i) (hash-map-insert-unchecked h i i)) (range 1 100))
+      (hash-map-resize h)
+      (map
+         (fn (i) (assert (= i (hash-map-get h i)) (to-string i)))
+         (range 1 100))
+      nil
+   ))
+   
+   ((fn ()
+      (define h (make-hash-map))
+      (map (fn (i) (hash-map-insert h i i)) (range 1 100))
+      (map
+         (fn (i) (assert (= i (hash-map-get h i)) (to-string i)))
+         (range 1 100))
+      nil
+   ))
+))
+
+
