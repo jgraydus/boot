@@ -511,6 +511,21 @@ _intrinsic_eval:
     pop rsi
     ret
 
+_intrinsic_is_string:
+    push r8
+    call _get_pair_head
+    call _obj_type
+    mov r8, TYPE_STRING_OBJ
+    cmp rax, r8
+    je .true
+    call _symbol_false
+    jmp .done
+.true:
+    call _symbol_true
+.done: 
+    pop r8 
+    ret
+
 _intrinsic_to_string:
     call _get_pair_head
     call _object_to_string
@@ -699,6 +714,7 @@ _add_intrinsics_to_env:
     add_binding "write-file", _intrinsic_write_file
     add_binding "parse", _intrinsic_parse
     add_binding "eval", _intrinsic_eval
+    add_binding "string?", _intrinsic_is_string
     add_binding "to-string", _intrinsic_to_string
     add_binding "string-append", _intrinsic_string_append
     add_binding "string-length", _intrinsic_string_length

@@ -14,3 +14,7 @@
 
 
 (if (not (= 6 (string-length foobar))) (exit 1) ())
+
+(if (string? "foo") () (exit 1))
+(if (string? 42) (exit 1) ())
+
