@@ -233,3 +233,21 @@
    (fn (exp desc)
       (if (not exp) (exit-with-msg desc 1) nil)))
 
+(define list-to-array
+   (fn (xs)
+      (define size (length xs))
+      (define arr (make-array size))
+      (map
+         (fn (next) (array-set arr (head next) (nth 1 next)))
+         (zip (range 0 (- size 1)) xs))
+      arr))
+
+(define array-to-list
+   (fn (arr)
+      (define size (array-size arr))
+      (map (fn (i) (array-get arr i)) (range 0 (- size 1)))))
+
+
+
+
+

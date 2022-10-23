@@ -1,0 +1,71 @@
+(define length
+   (fn (xs)
+      (if (nil? xs) 0 (+ 1 (length (tail xs))))))
+
+(define map
+   (fn (f xs)
+      (if (nil? xs) nil (cons (f (head xs)) (map f (tail xs))))))
+
+(define range
+   (fn (a b)
+      (if (> a b) nil (cons a (range (+ 1 a) b)))))
+
+(define zip
+   (fn (xs ys)
+      (if (nil? xs) nil
+      (if (nil? ys) nil
+          (cons (list (head xs) (head ys)) (zip (tail xs) (tail ys)))))))
+
+(define list-to-array
+   (fn (xs)
+      (define size (length xs))
+      (define arr (make-array size))
+      (map
+         (fn (next) (array-set arr (head next) (head (tail next))))
+         (zip (range 0 (- size 1)) xs))
+      arr))
+
+(define array-to-list
+   (fn (arr)
+      (define size (array-size arr))
+      (map (fn (i) (array-get arr i)) (range 0 (- size 1)))))
+
+(define not
+   (fn (x) (if x #f #t)))
+
+(define assert
+   (fn (x)
+      (if x () (exit 1))))
+
+((fn ()
+   (define a (list-to-array (list 1 2 "foo")))
+   (assert (= 1 (array-get a 0)))
+   (assert (= 2 (array-get a 1)))
+   (assert (= "foo" (array-get a 2)))
+))
+
+((fn ()
+   (define x (list-to-array (range 13 27)))
+   (assert (= x x))
+))
+
+((fn ()
+   (define x (list-to-array (range 13 29)))
+   (define y (list-to-array (range 13 17))) 
+   (assert (not (= x y)))
+))
+
+((fn ()
+   (define x (list-to-array (list "a" "b" "c" "d")))
+   (define y (list-to-array (list "a" "b" "d" "c")))
+   (assert (not (= x y)))
+))
+
+((fn ()
+   (define x (make-array 10))
+   (define y (make-array 10))
+   (array-set x 5 "foo")
+   (array-set y 5 "foo")
+   (assert (= x y)) 
+))
+

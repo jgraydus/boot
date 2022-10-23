@@ -1,3 +1,7 @@
+extern _make_array_obj
+extern _array_obj_size
+extern _array_obj_get
+extern _array_obj_set
 extern _make_pair_obj
 extern _make_integer_obj
 extern _integer_get_value

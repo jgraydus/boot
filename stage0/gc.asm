@@ -176,7 +176,7 @@ _gc_unmark:
     jmp .done
 .procedure:
     cmp rax, TYPE_PROCEDURE_OBJ
-    jne .done
+    jne .array
     ; don't do anything for intrinsics
     mov rax, r8
     call _proc_is_intrinsic
@@ -192,8 +192,32 @@ _gc_unmark:
     call _get_proc_env
     call _gc_unmark
     jmp .done
+.array:
+    cmp rax, TYPE_ARRAY_OBJ
+    jne .done
+    mov rax, r8
+    call _gc_unmark_array
 .done:
     pop rdx
+    pop r8
+    ret
+
+_gc_unmark_array:
+    push r8
+    push rcx
+    mov r8, rax
+    call _array_obj_size
+    mov rcx, rax
+.next:
+    cmp rcx, 0
+    je .done
+    dec rcx
+    mov rax, r8
+    call _array_obj_get
+    call _gc_unmark
+    jmp .next
+.done:
+    pop rcx
     pop r8
     ret
 

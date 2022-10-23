@@ -179,6 +179,52 @@ _intrinsic_less_than:
     pop r8
     ret
 
+_intrinsic_make_array:
+    call _get_pair_head
+    call _integer_get_value
+    call _make_array_obj
+    ret
+
+_intrinsic_array_size:
+    call _get_pair_head
+    call _array_obj_size
+    call _make_integer_obj
+    ret
+
+_intrinsic_array_set:
+    push r8
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_tail
+    call _get_pair_head
+    mov rdx, rax             ; value
+    mov rax, r8
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    mov rcx, rax             ; index
+    mov rax, r8
+    call _get_pair_head      ; array
+    call _array_obj_set
+    pop r8
+    ret
+
+_intrinsic_array_get:
+    push r8
+    push r9
+    push rcx
+    mov r8, rax
+    call _get_pair_tail
+    call _get_pair_head
+    call _integer_get_value
+    mov rcx, rax ; second arg = index
+    mov rax, r8
+    call _get_pair_head ; first arg = array
+    call _array_obj_get
+    pop rcx
+    pop r9
+    pop r8
+    ret
 
 _intrinsic_cons:
     push r8
@@ -626,6 +672,10 @@ _add_intrinsics_to_env:
     add_binding "env", _intrinsic_env
     add_binding "+", _intrinsic_add
     add_binding "-", _intrinsic_sub
+    add_binding "make-array", _intrinsic_make_array
+    add_binding "array-size", _intrinsic_array_size
+    add_binding "array-get", _intrinsic_array_get
+    add_binding "array-set", _intrinsic_array_set
     add_binding "cons", _intrinsic_cons
     add_binding "list", _intrinsic_list
     add_binding "head", _intrinsic_head

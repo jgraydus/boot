@@ -56,6 +56,7 @@ TYPE_STRING_OBJ     equ 2
 TYPE_INTEGER_OBJ    equ 3
 TYPE_SYMBOL_OBJ     equ 4
 TYPE_PROCEDURE_OBJ  equ 5
+TYPE_ARRAY_OBJ      equ 6
 
 ; object flags
 %define GC_MARK_FLAG            1
