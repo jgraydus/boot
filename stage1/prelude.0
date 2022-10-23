@@ -247,6 +247,9 @@
       (define size (array-size arr))
       (map (fn (i) (array-get arr i)) (range 0 (- size 1)))))
 
+(define set-nth!
+   (fn (xs i v)
+      (if (= i 0) (set-head! xs v) (set-nth! (tail xs) (- i 1) v))))
 
 
 
