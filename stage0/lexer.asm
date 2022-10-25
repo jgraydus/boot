@@ -331,7 +331,9 @@ _next_token:
     push rax
     ; multiply previous value by 10 and add value of new digit
     mov rax, 10
+    push rdx
     mul r8
+    pop rdx
     mov r8, rax
     pop rax
     sub rax, ascii_digit_offset
