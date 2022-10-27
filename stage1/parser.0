@@ -410,6 +410,38 @@
                   (parse-pred (fn (c) (not (= double-quote c))))))
             parse-double-quote))))
 
+(define parse-fn-inv
+   (fn (cs)
+      (define parser
+         (parse-map
+            (fn (v)
+               (list (quote fn-inv)
+                     (list (quote fn-name) (nth 2 v))
+                     (list (quote fn-args) (nth 4 v))))
+            (parse-sequence
+               (list
+                   parse-left-paren
+                   parse-optional-whitespace
+                   parse-identifier-exp
+                   parse-optional-whitespace
+                   (parse-many
+                      (parse-map
+                         (fn (v) (nth 0 v))
+                         (parse-sequence
+                            (list parse-exp parse-optional-whitespace))))
+                   parse-optional-whitespace
+                   parse-right-paren))))
+      (parser cs)))
+
+((fn ()
+   (define s (cs-from-string "(+)"))
+   (print (parse-fn-inv s))
+))
+((fn ()
+   (define s (cs-from-string "(+ 1 2)"))
+   (print (parse-fn-inv s))
+))
+
 (define parse-exp
    (parse-one-of
       (list
@@ -417,7 +449,8 @@
          parse-identifier-exp
          parse-string-exp
          parse-define-exp
-         parse-fn-exp)))
+         parse-fn-exp
+         parse-fn-inv)))
 
 
 
