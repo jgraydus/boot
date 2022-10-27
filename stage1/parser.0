@@ -433,15 +433,6 @@
                    parse-right-paren))))
       (parser cs)))
 
-((fn ()
-   (define s (cs-from-string "(+)"))
-   (print (parse-fn-inv s))
-))
-((fn ()
-   (define s (cs-from-string "(+ 1 2)"))
-   (print (parse-fn-inv s))
-))
-
 (define parse-exp
    (parse-one-of
       (list
