@@ -123,6 +123,12 @@
       (if (= 0 n) (head xs)
                   (nth (- n 1) (tail xs)))))
 
+(define last
+   (fn (xs)
+      (if (nil? xs) nil
+      (if (nil? (tail xs)) (head xs)
+          (last (tail xs))))))
+
 (define take
   (fn (n xs)
      (if (or (nil? xs) (= n 0)) ()

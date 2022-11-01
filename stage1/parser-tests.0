@@ -339,7 +339,61 @@
    (assert (= expected (success-value r)) "parse-fn-exp: multiple expressions in body")
 ))
 
+((fn ()
+   (define s (cs-from-string "42"))
+   (define r (parse-exp s))
+   (assert (success? r) "integer-exp")
+   (assert (integer-exp? (success-value r)) "integer-exp?")
+))
 
+((fn ()
+   (define s (cs-from-string "#t"))
+   (define r (parse-exp s))
+   (assert (success? r) "boolean-exp")
+   (assert (boolean-exp? (success-value r)) "boolean-exp?")
+))
+
+((fn ()
+   (define s (cs-from-string "foo"))
+   (define r (parse-exp s))
+   (assert (success? r) "id-exp")
+   (assert (id-exp? (success-value r)) "id-exp?")
+))
+
+((fn ()
+   (define s (cs-from-string (join (list (chr 34) "foo" (chr 34)))))
+   (define r (parse-exp s))
+   (assert (success? r) "string-exp")
+   (assert (string-exp? (success-value r)) "string-exp?")
+))
+
+((fn ()
+   (define s (cs-from-string "(define x 42)"))
+   (define r (parse-exp s))
+   (assert (success? r) "define-exp")
+   (assert (define-exp? (success-value r)) "define-exp?")
+))
+
+((fn ()
+   (define s (cs-from-string "(if x a b)"))
+   (define r (parse-exp s))
+   (assert (success? r) "if-exp")
+   (assert (if-exp? (success-value r)) "if-exp?")
+))
+
+((fn ()
+   (define s (cs-from-string "(fn (x) x)"))
+   (define r (parse-exp s))
+   (assert (success? r) "fn-exp")
+   (assert (fn-exp? (success-value r)) "fn-exp?")
+))
+
+((fn ()
+   (define s (cs-from-string "(+ a b)"))
+   (define r (parse-exp s))
+   (assert (success? r) "fn-inv")
+   (assert (fn-inv? (success-value r)) "fn-inv?")
+))
 
 
 

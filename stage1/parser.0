@@ -329,6 +329,16 @@
                   parse-ascii-non-zero-digit
                   (parse-many parse-ascii-digit)))))))
 
+(define parse-boolean-exp
+   (parse-one-of
+      (list
+         (parse-map
+            (fn () (list (quote boolean-exp) (quote boolean-true)))
+            (parse-string "#t"))
+         (parse-map
+            (fn () (list (quote boolean-exp) (quote boolean-false)))
+            (parse-string "#f")))))
+
 (define parse-define-exp
    (parse-map (fn (v) (list (quote define-exp) (nth 4 v) (nth 6 v)))
    (parse-sequence
@@ -416,13 +426,13 @@
          (parse-map
             (fn (v)
                (list (quote fn-inv)
-                     (list (quote fn-name) (nth 2 v))
+                     (list (quote the-fn) (nth 2 v))
                      (list (quote fn-args) (nth 4 v))))
             (parse-sequence
                (list
                    parse-left-paren
                    parse-optional-whitespace
-                   parse-identifier-exp
+                   (parse-one-of (list parse-identifier-exp parse-fn-exp))
                    parse-optional-whitespace
                    (parse-many
                       (parse-map
@@ -433,25 +443,79 @@
                    parse-right-paren))))
       (parser cs)))
 
+(define parse-if-exp
+   (fn (cs)
+      (define parser
+         (parse-map
+            (fn (v)
+               (list
+                  (quote if-exp)
+                  (list (quote condition) (nth 4 v))
+                  (list (quote true-branch) (nth 6 v))
+                  (list (quote false-branch) (nth 8 v))))
+            (parse-sequence
+               (list
+                  parse-left-paren      parse-optional-whitespace
+                  (parse-string "if")   parse-required-whitespace
+                  ; condition
+                  parse-exp             parse-optional-whitespace
+                  ; true branch
+                  parse-exp             parse-optional-whitespace
+                  ; false branch
+                  parse-exp             parse-optional-whitespace
+                  parse-right-paren))))
+      (parser cs)))
+
 (define parse-exp
    (parse-one-of
       (list
          parse-integer-exp
+         parse-boolean-exp
          parse-identifier-exp
          parse-string-exp
          parse-define-exp
+         parse-if-exp
          parse-fn-exp
-         parse-fn-inv)))
+         parse-fn-inv
+)))
 
+(define integer-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote integer-exp) (head exp)))))
 
+(define boolean-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote boolean-exp) (head exp)))))
 
+(define id-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote id-exp) (head exp)))))
 
+(define string-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote string-exp) (head exp)))))
 
+(define define-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote define-exp) (head exp)))))
 
+(define if-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote if-exp) (head exp)))))
 
+(define fn-exp?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote fn-exp) (head exp)))))
 
-
-
-
-
+(define fn-inv?
+   (fn (exp)
+      (and (cons? exp)
+           (= (quote fn-inv) (head exp)))))
 
