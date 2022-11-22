@@ -1,0 +1,80 @@
+; vec is a datatype that stores items in an array. when the array
+; runs out of space for new items, the vec resizes its array  to
+; make more room
+
+(define vec-new
+   (fn () (list (quote vec) 0 (make-array 4))))
+
+(define vec-size
+   (fn (v) (nth 1 v)))
+
+(define vec-set!
+   (fn (v i x) (array-set! (nth 2 v) i x)))
+
+(define vec-get
+   (fn (v i) (array-get (nth 2 v) i)))
+
+(define vec-to-list
+   (fn (v)
+      (define go
+         (fn (n)
+            (if (= n (vec-size v))
+               nil
+               (cons (vec-get v n) (go (+ n 1))))))
+      (go 0)))
+
+(define list-to-vec
+   (fn (xs)
+      (define v (vec-new))
+      (map (fn (x) (vec-insert-back! v x)) xs)
+      v))
+
+(define vec-insert-back! ((fn ()
+   (define copy-array
+      (fn (from to)
+         (define f (fn (i) (array-set! to i (array-get from i))))
+         (define n (min (array-size from) (array-size to)))
+         (map f (range 0 (- n 1)))))
+   
+   (define resize-array
+      (fn (v)
+         (define old-array (nth 2 v))
+         (define new-array (make-array (* 2 (array-size old-array))))
+         (copy-array old-array new-array)
+         (set-nth! v 2 new-array)
+         nil))
+
+   (fn (v x)
+      (define i (vec-size v))
+      (if (= i (array-size (nth 2 v))) (resize-array v) nil)
+      (vec-set! v i x)
+      (set-nth! v 1 (+ 1 i))
+      v))
+))
+
+(define vec-remove-back!
+   (fn (v)
+      (define i (- (vec-size v) 1))
+      (define x (vec-get v i))
+      (vec-set! v i nil)
+      (set-nth! v 1 i)
+      x)) 
+
+(define vec-find
+   (fn (v p)
+      (define go
+         (fn (n)
+            (if (= n (vec-size v)) nil
+            (if (p (vec-get v n)) (vec-get v n)
+            (go (+ n 1))))))
+      (go 0)))
+
+(define vec-index-of
+   (fn (v p)
+      (define go
+         (fn (n)
+            (if (= n (vec-size v)) nil
+            (if (p (vec-get v n)) n
+            (go (+ n 1))))))
+      (go 0)))
+
