@@ -40,7 +40,7 @@
          (cons
             (list key value)
             (filter (fn (entry) (not (= key (head entry)))) bucket)))
-      (array-set arr i bucket)
+      (array-set! arr i bucket)
       (define size (nth 1 hash-map))
       (set-head! (tail hash-map) (+ 1 size))
       hash-map))

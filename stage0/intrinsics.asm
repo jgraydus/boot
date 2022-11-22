@@ -690,7 +690,7 @@ _add_intrinsics_to_env:
     add_binding "make-array", _intrinsic_make_array
     add_binding "array-size", _intrinsic_array_size
     add_binding "array-get", _intrinsic_array_get
-    add_binding "array-set", _intrinsic_array_set
+    add_binding "array-set!", _intrinsic_array_set
     add_binding "cons", _intrinsic_cons
     add_binding "list", _intrinsic_list
     add_binding "head", _intrinsic_head

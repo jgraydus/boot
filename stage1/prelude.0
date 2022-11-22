@@ -27,11 +27,19 @@
 ; string-append, string-length, substring
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+(define imported-modules (list nil))
+
 (define import
    (fn (filepath)
-      (define p (parse (read-file filepath)))
-      ; evaluate in the parent environment
-      (eval p (head (env)))))
+      (define base-env (head (env)))
+      (if (nil? (filter (fn (x) (= x filepath)) (head imported-modules)))
+         ((fn ()
+            (set-head! imported-modules (cons filepath (head imported-modules)))
+            (define p (parse (read-file filepath)))
+            ; evaluate in the parent environment
+            (eval p base-env)
+         ))
+         nil)))
 
 ; transform into the application of a 0-arity function containing a 'define' for each binding
 (define let
@@ -244,7 +252,7 @@
       (define size (length xs))
       (define arr (make-array size))
       (map
-         (fn (next) (array-set arr (head next) (nth 1 next)))
+         (fn (next) (array-set! arr (head next) (nth 1 next)))
          (zip (range 0 (- size 1)) xs))
       arr))
 
@@ -257,6 +265,6 @@
    (fn (xs i v)
       (if (= i 0) (set-head! xs v) (set-nth! (tail xs) (- i 1) v))))
 
-
-
+(define min (fn (a b) (if (< a b) a b)))
+(define max (fn (a b) (if (> a b) a b)))
 

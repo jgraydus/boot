@@ -21,7 +21,7 @@
       (define size (length xs))
       (define arr (make-array size))
       (map
-         (fn (next) (array-set arr (head next) (head (tail next))))
+         (fn (next) (array-set! arr (head next) (head (tail next))))
          (zip (range 0 (- size 1)) xs))
       arr))
 
@@ -64,8 +64,9 @@
 ((fn ()
    (define x (make-array 10))
    (define y (make-array 10))
-   (array-set x 5 "foo")
-   (array-set y 5 "foo")
+   (array-set! x 5 "foo")
+   (array-set! y 5 "foo")
+
    (assert (= x y)) 
 ))
 
