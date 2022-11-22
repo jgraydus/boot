@@ -1,0 +1,64 @@
+; set interface. not efficient, but the best we can
+; do with only equality (no ordering or hash values for the items)
+
+(import "vec.0")
+
+; create a new set. note that this requires explicitly providing
+; a function that defines equality for the items
+(define set-new (fn (eq-fn)
+   (list (quote set) eq-fn (vec-new))
+))
+
+(define set-size (fn (set)
+   (vec-size (nth 2 set))
+))
+
+(define set-find (fn (set p)
+   (vec-find (nth 2 set) p)
+))
+
+(define set-has? (fn (set item)
+   (define eq-fn (nth 1 set))
+   (define p (fn (x) (eq-fn x item)))
+   (not (nil? (set-find set p)))
+))
+
+(define set-has-all? (fn (set items)
+   (if (nil? items) #t
+       (and (set-has? set (head items))
+            (set-has-all? set (tail items))))
+))
+
+(define set-insert! (fn (set item)
+   (if (not (set-has? set item))
+      (vec-insert-back! (nth 2 set) item)
+      nil)
+))
+
+(define set-to-list (fn (set)
+   (vec-to-list (nth 2 set))
+))
+
+; convert a list into a set. note that an equality function
+; must be provided
+(define list-to-set (fn (eq-fn xs)
+   (define set (set-new eq-fn))
+   (map (fn (x) (set-insert! set x)) xs)
+   set
+))
+
+; determine if two sets are equal (ie contain the same items).
+; note that this is based on the equality function of the first argument
+(define set-eq (fn (s1 s2)
+   (and (= (set-size s1) (set-size s2))
+        (set-has-all? s1 (set-to-list s2)))
+))
+
+;((fn ()
+;   (define s1 (list-to-set = (list 1 1 2 2 3 3)))
+;   (define s2 (list-to-set = (list 3 2 1 3 2 1)))
+;   (print (set-to-list s1))
+;   (print (set-to-list s2))
+;   (print (set-eq s1 s2))
+;))
+
